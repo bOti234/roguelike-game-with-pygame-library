@@ -1,4 +1,5 @@
 import pygame
+import math
 import screeninfo
 from typing import List, Dict
 from player import Player
@@ -35,12 +36,15 @@ class Game():
         self.player_radius = self.settings.game_size    # Bit unnecesary
         self.player_pos: pygame.Vector2 = pygame.Vector2(self.settings.screen_width / 2, self.settings.screen_height / 2)
         self.background: pygame.Vector2  = pygame.Vector2(self.player_pos.x, self.player_pos.y)
+
+        base_weapon = Weapon("base weapon", 1.5, "normal", "single straight", "white", 30, 25, self.player_pos.x, self.player_pos.y)
+        self.player_weapons: List[Weapon] = [base_weapon]
     
     def openMenu(self, menu: Menu):
         self.gamePause()
-        menu.open(self.screen_width, self.screen_height)
+        menu.open(self.settings.screen_width, self.settings.screen_height)
 
-    def gamePause(self):
+    def gamePause(self):    #TODO
         pass
     
     def gameRun(self, player: Player):
@@ -57,15 +61,17 @@ class Game():
                 if event.type == pygame.QUIT:
                     running = False
 
-            self.drawBackground(screen) # Draw background and border of the map
-
             mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) # Get mouse pos
+
+            self.drawBackground(screen) # Draw background and border of the map
 
             pygame.draw.circle(screen, "red", (self.player_pos.x, self.player_pos.y), self.player_radius) # Draw player
 
             self.writeOnScreen(screen)  # Write some stuff on the screen
 
             self.checkKeysPressed(dt) # Update background position based on player movement
+
+            self.attackCicle(screen, mouse_pos, dt)    # Drawing 
 
             pygame.display.flip() # flip() the display to put your work on screen
 
@@ -158,6 +164,41 @@ class Game():
         # Kinda consol log -> Write stuff on the canvas
         # player_pos_text = font.render("", True, "black")
         #screen.blit(player_pos_text, (0, 0))
+    
+    def attackCicle(self, screen: pygame.Surface, mouse_pos: pygame.Vector2, dt):
+        for weapon in self.player_weapons:
+            if weapon.cooldown_current <= 0:
+                weapon.setOnCooldown()
+                weapon.animation = True
+            else:
+                weapon.updateCooldown(dt)
+            if weapon.animation:
+                if "straight" in weapon.pattern:
+                    if weapon.position_destination.x == 0 and weapon.position_destination.y == 0:
+                        weapon.animation = True
+                        weapon.position_destination = mouse_pos
+                        weapon.dist = math.sqrt((weapon.position_destination.x - weapon.position_original.x)**2 + (weapon.position_destination.y - weapon.position_original.y)**2)
+
+                    sinus = abs((weapon.position_destination.y - weapon.position_original.y)/weapon.dist) * self.compare_subtraction(weapon.position_destination.y,weapon.position_original.y)
+                    cosinus = abs((weapon.position_destination.x - weapon.position_original.x)/weapon.dist) * self.compare_subtraction(weapon.position_destination.x,weapon.position_original.x)
+
+                    weapon.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
+
+                    weapon.position.x += cosinus * weapon.speed
+                    weapon.position.y += sinus * weapon.speed
+                    pygame.draw.line(screen, weapon.colour, (weapon.position.x - cosinus * weapon.size, weapon.position.y - sinus * weapon.size), (weapon.position.x, weapon.position.y), 15)
+                    
+                    if weapon.cooldown_current <= 0:
+                        weapon.animation = False
+                        weapon.position_destination.x = 0
+                        weapon.position_destination.y = 0
+                        weapon.position.x = weapon.position_original.x
+                        weapon.position.y = weapon.position_original.y
+        
+    def compare_subtraction(self, a, b):
+        result = a - b
+        return 1 if result > 0 else -1
+
 
 p1 = Player("admin","12345")
 game1 = Game()
