@@ -1,5 +1,5 @@
 import pygame
-import sys
+import os
 
 class GameObject():
     def __init__(self, objtype):
@@ -18,7 +18,6 @@ class Weapon(GameObject):
         self.position_original = pygame.Vector2(x,y)
         self.position = pygame.Vector2(x,y)
         self.position_destination = pygame.Vector2(0,0)
-        self.dist = 0
         self.animation = False
 
     def updateCooldown(self, dt):
@@ -83,56 +82,94 @@ class Inventory(HUD):
 
 class Menu(HUD):
     def __init__(self):
-        pass
+        self.opened = False
+        self.state = None
 
-    def open(self, screen_width, screen_height):
+
+    def openInGameMenu(self, screen, screen_width: int, screen_height: int, paused):
         if pygame.get_init():
-            # Set up the screen
-            screen_width = 800
-            screen_height = 600
-            screen = pygame.display.set_mode((screen_width, screen_height))
-            pygame.display.set_caption("Pygame Menu")
 
-            # Colors
-            WHITE = (255, 255, 255)
-            BLACK = (0, 0, 0)
-            GRAY = (200, 200, 200)
+            dirname = os.path.dirname(__file__)
+            filename = os.path.join(dirname, '../../images/')
+            resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
+            options_img = pygame.image.load(filename+"/button_options.png").convert_alpha()
+            quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
+            video_img = pygame.image.load(filename+"/button_video.png").convert_alpha()
+            audio_img = pygame.image.load(filename+"/button_audio.png").convert_alpha()
+            keys_img = pygame.image.load(filename+"/button_keys.png").convert_alpha()
+            back_img = pygame.image.load(filename+"/button_back.png").convert_alpha()
 
-            # Fonts
-            font = pygame.font.Font(None, 36)
+            #create button instances
+            resume_button = Button(screen_width/2 - resume_img.get_width()/2, screen_height/4 + 125, resume_img, 1)
+            options_button = Button(screen_width/2 - options_img.get_width()/2, screen_height/4 + 250, options_img, 1)
+            quit_button = Button(screen_width/2 - quit_img.get_width()/2, screen_height/4 + 375, quit_img, 1)
+            video_button = Button(screen_width/2 - video_img.get_width()/2, screen_height/4 + 75, video_img, 1)
+            audio_button = Button(screen_width/2 - audio_img.get_width()/2, screen_height/4 + 200, audio_img, 1)
+            keys_button = Button(screen_width/2 - keys_img.get_width()/2, screen_height/4 + 325, keys_img, 1)
+            back_button = Button(screen_width/2 - back_img.get_width()/2, screen_height/4 + 450, back_img, 1)
 
-            # Create a template button
-            template_button = Button(300, 250, 200, 50, "Template Button")
+            #game loop
+            run = True
+            while run:
+                window = pygame.Rect(screen_width/4, screen_height/4, screen_width/2, screen_height/2)
+                pygame.draw.rect(screen, (52, 78, 91), window)
 
-            # Main loop
-            running = True
-            while running:
-                # Event handling
+                #check if game is paused
+                if paused == True:
+                    #check menu state
+                    if self.state == "ingame":
+                        #draw pause screen buttons
+                        if resume_button.draw(screen):
+                            paused = False
+                            return "closed"
+                        if options_button.draw(screen):
+                            self.state = "options"
+                        if quit_button.draw(screen):
+                            run = False
+                            pygame.quit()
+                    #check if the options menu is open
+                    if self.state == "options":
+                        #draw the different options buttons
+                        if video_button.draw(screen):
+                            print("Video Settings")
+                        if audio_button.draw(screen):
+                            print("Audio Settings")
+                        if keys_button.draw(screen):
+                            print("Change Key Bindings")
+                        if back_button.draw(screen):
+                            self.state = "ingame"
+
+                #event handler
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        running = False
+                        run = False
 
-                # Clear the screen
-                screen.fill(WHITE)
+                pygame.display.update()
 
-                # Draw the template button
-                template_button.draw()
+class Button():
+	def __init__(self, x, y, image: pygame.image, scale):
+		width = image.get_width()
+		height = image.get_height()
+		self.image = pygame.transform.scale(image, (int(width * scale), int(height * scale)))
+		self.rect = self.image.get_rect()
+		self.rect.topleft = (x, y)
+		self.clicked = False
 
-                # Update the display
-                pygame.display.flip()
+	def draw(self, surface):
+		action = False
+		#get mouse position
+		pos = pygame.mouse.get_pos()
 
-            # Quit Pygame
-            pygame.quit()
-            sys.exit()
+		#check mouseover and clicked conditions
+		if self.rect.collidepoint(pos):
+			if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+				self.clicked = True
+				action = True
 
-# Button class
-class Button:
-    def __init__(self, x, y, width, height, text):
-        self.rect = pygame.Rect(x, y, width, height)
-        self.text = text
+		if pygame.mouse.get_pressed()[0] == 0:
+			self.clicked = False
 
-    def draw(self, screen, colour1, colour2, font):
-        pygame.draw.rect(screen, colour1, self.rect)
-        text_surface = font.render(self.text, True, colour2)
-        text_rect = text_surface.get_rect(center=self.rect.center)
-        screen.blit(text_surface, text_rect)
+		#draw button on screen
+		surface.blit(self.image, (self.rect.x, self.rect.y))
+
+		return action

@@ -1,5 +1,6 @@
 import pygame
 import math
+import time
 import screeninfo
 from typing import List, Dict
 from player import Player
@@ -39,14 +40,18 @@ class Game():
 
         base_weapon = Weapon("base weapon", 1.5, "normal", "single straight", "white", 30, 25, self.player_pos.x, self.player_pos.y)
         self.player_weapons: List[Weapon] = [base_weapon]
+        self.onpause = False
     
-    def openMenu(self, menu: Menu):
-        self.gamePause()
-        menu.open(self.settings.screen_width, self.settings.screen_height)
+    def openMenu(self, menu: Menu, screen):
+        self.onpause = True
+        #self.openedHUD = menu
+        menu.state = "ingame"
+        response = menu.openInGameMenu(screen, self.settings.screen_width, self.settings.screen_height, self.onpause)
+        if response == "closed":
+            #self.openedHUD.run = False
+            #wself.openedHUD = None
+            self.onpause = False
 
-    def gamePause(self):    #TODO
-        pass
-    
     def gameRun(self, player: Player):
         pygame.init()
         screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
@@ -60,22 +65,25 @@ class Game():
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+            if self.onpause != True:
+                mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) # Get mouse pos
 
-            mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) # Get mouse pos
+                self.drawBackground(screen) # Draw background and border of the map
 
-            self.drawBackground(screen) # Draw background and border of the map
+                pygame.draw.circle(screen, "red", (self.player_pos.x, self.player_pos.y), self.player_radius) # Draw player
 
-            pygame.draw.circle(screen, "red", (self.player_pos.x, self.player_pos.y), self.player_radius) # Draw player
+                self.writeOnScreen(screen)  # Write some stuff on the screen
 
-            self.writeOnScreen(screen)  # Write some stuff on the screen
+                self.checkKeysPressed(dt, screen) # Update background position based on player movement
 
-            self.checkKeysPressed(dt) # Update background position based on player movement
+                self.attackCycle(screen, mouse_pos, dt)    # Drawing the weapon attacks
 
-            self.attackCicle(screen, mouse_pos, dt)    # Drawing 
+                pygame.display.flip() # flip() the display to put your work on screen
 
-            pygame.display.flip() # flip() the display to put your work on screen
-
-            dt = clock.tick(self.settings.fps) / 1000 # dt is delta time in seconds since last frame
+                dt = clock.tick(self.settings.fps) / 1000 # dt is delta time in seconds since last frame
+            
+            else:
+                self.checkKeysPressed(dt, screen)
 
         pygame.quit()
 
@@ -91,7 +99,7 @@ class Game():
         else:
             return [True, "nothing"]
     
-    def checkKeysPressed(self, dt):
+    def checkKeysPressed(self, dt, screen):
         keys = pygame.key.get_pressed()
         gate = self.notTouchingBorder(dt)   #TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
         if keys[pygame.K_w] and keys[pygame.K_a] and gate[1] != "up" and gate[1] != "left":
@@ -123,8 +131,9 @@ class Game():
             self.background.x -= self.settings.speed * dt
         
         if keys[pygame.K_ESCAPE]:
-            m1 = Menu()
-            self.openMenu(m1)
+            if not self.onpause:
+                m1 = Menu()
+                self.openMenu(m1, screen)
 
     def drawBackground(self, screen):
         # fill the screen with a color to wipe away anything from last frame
@@ -165,7 +174,7 @@ class Game():
         # player_pos_text = font.render("", True, "black")
         #screen.blit(player_pos_text, (0, 0))
     
-    def attackCicle(self, screen: pygame.Surface, mouse_pos: pygame.Vector2, dt):
+    def attackCycle(self, screen: pygame.Surface, mouse_pos: pygame.Vector2, dt):
         for weapon in self.player_weapons:
             if weapon.cooldown_current <= 0:
                 weapon.setOnCooldown()
@@ -177,10 +186,9 @@ class Game():
                     if weapon.position_destination.x == 0 and weapon.position_destination.y == 0:
                         weapon.animation = True
                         weapon.position_destination = mouse_pos
-                        weapon.dist = math.sqrt((weapon.position_destination.x - weapon.position_original.x)**2 + (weapon.position_destination.y - weapon.position_original.y)**2)
-
-                    sinus = abs((weapon.position_destination.y - weapon.position_original.y)/weapon.dist) * self.compare_subtraction(weapon.position_destination.y,weapon.position_original.y)
-                    cosinus = abs((weapon.position_destination.x - weapon.position_original.x)/weapon.dist) * self.compare_subtraction(weapon.position_destination.x,weapon.position_original.x)
+                    distance = math.sqrt((weapon.position_destination.x - weapon.position_original.x)**2 + (weapon.position_destination.y - weapon.position_original.y)**2)
+                    sinus = abs((weapon.position_destination.y - weapon.position_original.y)/distance) * self.compare_subtraction(weapon.position_destination.y,weapon.position_original.y)
+                    cosinus = abs((weapon.position_destination.x - weapon.position_original.x)/distance) * self.compare_subtraction(weapon.position_destination.x,weapon.position_original.x)
 
                     weapon.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
 
@@ -202,5 +210,12 @@ class Game():
 
 p1 = Player("admin","12345")
 game1 = Game()
-game1.gameSetup("normal","fast", 60, screeninfo.get_monitors()[0].width, screeninfo.get_monitors()[0].height, 40)
+game1.gameSetup(
+    difficulty = "normal",
+    speed = "fast", 
+    fps = 60, 
+    screen_width = screeninfo.get_monitors()[0].width, 
+    screen_height = screeninfo.get_monitors()[0].height, 
+    game_size = 40
+    )
 game1.gameRun(p1)
