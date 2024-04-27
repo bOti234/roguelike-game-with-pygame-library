@@ -1,7 +1,7 @@
 from typing import List
 import pygame
 
-class Player():
+class User():
     def __init__(self, username: str, password: str):
         self.username: str = username
         self.password: str = password

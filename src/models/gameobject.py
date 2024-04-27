@@ -1,24 +1,84 @@
 import pygame
 import os
 
-class GameObject():
-    def __init__(self, objtype):
-        self.objtype = objtype
+class GameObject(pygame.sprite.Sprite):
+    def __init__(self, objtype: str, position, width: int, height: int):
+        pygame.sprite.Sprite.__init__(self)
+        self.objtype: str = objtype
+        self.position: pygame.Vector2 = position
+        self.width = width
+        self.height = height
+        self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
+    
+    def setHitbox(self):
+        pass
+    
+    def setPositionBasedOnMovement(self, speed, dt, gate):
+        keys = pygame.key.get_pressed()
+        #TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
+        if keys[pygame.K_w] and keys[pygame.K_a] and "up" not in gate and "left" not in gate:
+            self.position.y += speed * dt / 2**(1/2)
+            self.position.x += speed * dt / 2**(1/2)
+
+        elif keys[pygame.K_w] and keys[pygame.K_d] and "up" not in gate and "right" not in gate:
+            self.position.y += speed * dt / 2**(1/2)
+            self.position.x -= speed * dt / 2**(1/2)
+
+        elif keys[pygame.K_w] and "up" not in gate:
+            self.position.y += speed * dt
+
+        elif keys[pygame.K_s] and keys[pygame.K_a] and "down" not in gate and "left" not in gate:
+            self.position.y -= speed * dt / 2**(1/2)
+            self.position.x += speed * dt / 2**(1/2)
+
+        elif keys[pygame.K_s] and keys[pygame.K_d] and "down" not in gate and "right" not in gate:
+            self.position.y -= speed * dt / 2**(1/2)
+            self.position.x -= speed * dt / 2**(1/2)
+
+        elif keys[pygame.K_s] and "down" not in gate:
+            self.position.y -= speed * dt
+
+        elif keys[pygame.K_a] and "left" not in gate:
+            self.position.x += speed * dt
+
+        elif keys[pygame.K_d] and "right" not in gate:
+            self.position.x -= speed * dt
+        self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
+
+class PlayerCharacter(GameObject):
+    def __init__(self, radius, position):
+        objtype = "player"
+        super().__init__(objtype, pygame.Vector2(position.x-radius, position.y-radius), radius*2, radius*2)
+        self.radius = radius
 
 class Weapon(GameObject):
     def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, x: int, y: int):
+        objtype = "weapon"
+        self.pattern: str = pattern
+        position = pygame.Vector2(x,y)
+        if "circle" in self.pattern:
+            self.rotation = 0
+            position.x -= size
+            position.y -= size
+            width_and_height = size
+        else:
+            self.rotation = None
+            width_and_height = size
+
+        super().__init__(objtype, position, width_and_height, width_and_height)
+
         self.name: str = name
         self.cooldown_max: float = cooldown_max
         self.cooldown_current: float = cooldown_max
         self.dmgtype: str = dmgtype
-        self.pattern: str = pattern
+        
         self.colour: str = colour
         self.size: int = size
         self.speed: int = speed
         self.position_original = pygame.Vector2(x,y)
-        self.position = pygame.Vector2(x,y)
         self.position_destination = pygame.Vector2(0,0)
         self.animation = False
+
 
     def updateCooldown(self, dt):
         if self.cooldown_current > 0:
@@ -30,45 +90,21 @@ class Weapon(GameObject):
         if self.cooldown_current <= 0:
             self.cooldown_current = self.cooldown_max
     
-    def setPositionBasedOnMovement(self, speed, dt, gate):
-        keys = pygame.key.get_pressed()
-        #TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
-        if keys[pygame.K_w] and keys[pygame.K_a] and gate[1] != "up" and gate[1] != "left":
-            self.position.y += speed * dt / 2**(1/2)
-            self.position.x += speed * dt / 2**(1/2)
-
-        elif keys[pygame.K_w] and keys[pygame.K_d] and gate[1] != "up" and gate[1] != "right":
-            self.position.y += speed * dt / 2**(1/2)
-            self.position.x -= speed * dt / 2**(1/2)
-
-        elif keys[pygame.K_w] and gate[1] != "up":
-            self.position.y += speed * dt
-
-        elif keys[pygame.K_s] and keys[pygame.K_a] and gate[1] != "down" and gate[1] != "left":
-            self.position.y -= speed * dt / 2**(1/2)
-            self.position.x += speed * dt / 2**(1/2)
-
-        elif keys[pygame.K_s] and keys[pygame.K_d] and gate[1] != "down" and gate[1] != "right":
-            self.position.y -= speed * dt / 2**(1/2)
-            self.position.x -= speed * dt / 2**(1/2)
-
-        elif keys[pygame.K_s] and gate[1] != "down":
-            self.position.y -= speed * dt
-
-        elif keys[pygame.K_a] and gate[1] != "left":
-            self.position.x += speed * dt
-
-        elif keys[pygame.K_d] and gate[1] != "right":
-            self.position.x -= speed * dt
+    
 
 
 class Enemy(GameObject):
     def __init__(self):
         pass
 
-class Collectible(GameObject):
+class Experience(GameObject):
     def __init__(self):
         pass
+
+class WeaponKit(GameObject):
+    def __init__(self, randpos, width, height):
+        objtype = "weaponkit"
+        super().__init__(objtype, randpos, width, height)
 
 class HUD(GameObject):
     def __init__(self, objtype):
