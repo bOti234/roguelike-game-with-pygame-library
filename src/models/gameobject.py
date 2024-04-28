@@ -1,3 +1,4 @@
+from typing import List, Dict, Union
 import pygame
 import os
 
@@ -52,17 +53,19 @@ class PlayerCharacter(GameObject):
         self.radius = radius
 
 class Weapon(GameObject):
-    def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, x: int, y: int):
+    def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], x: int, y: int):
         objtype = "weapon"
         self.pattern: str = pattern
         position = pygame.Vector2(x,y)
-        if "circle" in self.pattern:
+        if "circle" in self.pattern or "angled" in self.pattern:
             self.rotation = 0
+            self.distance = 150
             position.x -= size
             position.y -= size
             width_and_height = size
         else:
             self.rotation = None
+            self.distance = None
             width_and_height = size
 
         super().__init__(objtype, position, width_and_height, width_and_height)
@@ -71,14 +74,24 @@ class Weapon(GameObject):
         self.cooldown_max: float = cooldown_max
         self.cooldown_current: float = cooldown_max
         self.dmgtype: str = dmgtype
-        
+        self.level = 0
         self.colour: str = colour
         self.size: int = size
         self.speed: int = speed
+        self.bulletLifeTime = bulletlifetime
+        self.bullets: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
         self.position_original = pygame.Vector2(x,y)
         self.position_destination = pygame.Vector2(0,0)
         self.animation = False
 
+        self.loadImages()
+    
+    def loadImages(self):
+        if pygame.get_init():
+            dirname = os.path.dirname(__file__)
+            filename = os.path.join(dirname, '../../images/weapons/')
+            self.image_base = pygame.image.load(filename + "/"+str(self.name)+"_1.jpg").convert_alpha()
+            self.image_maxed = pygame.image.load(filename + "/"+str(self.name)+"_2.jpg").convert_alpha()
 
     def updateCooldown(self, dt):
         if self.cooldown_current > 0:
@@ -90,7 +103,50 @@ class Weapon(GameObject):
         if self.cooldown_current <= 0:
             self.cooldown_current = self.cooldown_max
     
+    def upgradeWeapon(self):
+        if self.level < 5:
+            self.level += 1
+
+        if "straight" in self.pattern:
+            self.speed += 5
+            self.size += 3
+        
+        if "rifle" in self.name:
+            self.cooldown_max -= 0.1 * (5 - self.level)
+            self.speed -= 1
+            self.size -= 1
+            if self.level == 3:
+                self.pattern = "multiple straight"
+            if self.level == 5:
+                self.speed -= 3
+        
+        if "circle" in self.pattern:
+            self.speed *= 1.1
+            self.size += 5
+            self.distance += 50
+        
+        if "angled" in self.pattern:
+            self.cooldown_max -= 0.35
+            self.size += 2
+            self.speed += 2
+            if self.level >= 4:
+                self.size += 1
+                self.speed += 1
     
+class Bullet(GameObject):
+    def __init__(self, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, crit: bool, objtype: str, width_and_height: int):
+        super().__init__(objtype, position, width_and_height, width_and_height)
+        self.position = position
+        self.position_original = position_original
+        self.position_destination = position_destination
+        self.lifeTime: float = lifetime
+        self.crit: bool = crit
+
+    def addRotation(self, rotation):
+        self.rotation = rotation
+        
+    def addAnimationRotation(self, rotation):
+        self.animation_rotation = rotation
 
 
 class Enemy(GameObject):
@@ -126,7 +182,7 @@ class Menu(HUD):
         if pygame.get_init():
 
             dirname = os.path.dirname(__file__)
-            filename = os.path.join(dirname, '../../images/')
+            filename = os.path.join(dirname, '../../images/buttons/')
             resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
             options_img = pygame.image.load(filename+"/button_options.png").convert_alpha()
             quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
@@ -176,6 +232,81 @@ class Menu(HUD):
                             self.state = "ingame"
 
                 #event handler
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        run = False
+
+                pygame.display.update()
+    
+    def openWeaponSelectorMenu(self, screen, screen_width: int, screen_height: int, paused: bool, weaponlist: List[Weapon]):
+        if pygame.get_init():
+            # Load button images for menu buttons selection
+            for weapon in weaponlist:
+                weapon.loadImages()
+
+            dirname = os.path.dirname(__file__)
+            filename = os.path.join(dirname, '../../images/buttons/')
+            get_img = pygame.image.load(filename + "/button_select.png").convert_alpha()
+
+            # Create button instances for weapon selection
+            images: List[pygame.Surface] = []
+            for i in range(len(weaponlist)):
+                if weaponlist[i].level < 4:
+                    images.append(weaponlist[i].image_base)
+                else:
+                    images.append(weaponlist[i].image_maxed)
+
+            if len(weaponlist) == 1:
+                weapon1_button = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2, screen_height / 4 + 125, images[0], 0.1)
+                get_button1 = Button(screen_width / 2 - get_img.get_width() / 2, screen_height / 4 + 425, get_img, 1)
+            
+            elif len(weaponlist) == 2:
+                weapon1_button = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 - 150, screen_height / 4 + 125, images[0], 0.1)
+                weapon2_button = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2 + 150, screen_height / 4 + 125, images[1], 0.1)
+
+                get_button1 = Button(screen_width / 2 - get_img.get_width() / 2 - 150, screen_height / 4 + 425, get_img, 1)
+                get_button2 = Button(screen_width / 2 - get_img.get_width() / 2 + 150, screen_height / 4 + 425, get_img, 1)
+            
+            elif len(weaponlist) == 3:
+                weapon1_button = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 - 300, screen_height / 4 + 125, images[0], 0.1)
+                weapon2_button = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2, screen_height / 4 + 125, images[1], 0.1)
+                weapon3_button = Button(screen_width / 2 - images[2].get_width() * 0.1 / 2 + 300, screen_height / 4 + 125, images[2], 0.1)
+
+                get_button1 = Button(screen_width / 2 - get_img.get_width() / 2 - 300, screen_height / 4 + 425, get_img, 1)
+                get_button2 = Button(screen_width / 2 - get_img.get_width() / 2, screen_height / 4 + 425, get_img, 1)
+                get_button3 = Button(screen_width / 2 - get_img.get_width() / 2 + 300, screen_height / 4 + 425, get_img, 1)
+
+            # Game loop
+            run = True
+            while run:
+                window = pygame.Rect(screen_width / 4, screen_height / 4, screen_width / 2, screen_height / 2)
+                pygame.draw.rect(screen, (52, 78, 91), window)
+
+                # Check if game is paused
+                if paused:
+                    # Check menu state
+                    if self.state == "weapon_selector":
+                        # Draw weapon selection buttons
+                        if len(weaponlist) > 0:
+                            weapon1_button.draw(screen)
+                            if get_button1.draw(screen):
+                                weaponlist[0].upgradeWeapon()
+                                paused = False
+                                return ["closed", weaponlist[0]]
+                        if len(weaponlist) > 1:
+                            weapon1_button.draw(screen), weapon2_button.draw(screen)
+                            if get_button2.draw(screen):
+                                weaponlist[1].upgradeWeapon()
+                                paused = False
+                                return ["closed", weaponlist[1]]
+                        if len(weaponlist) > 2:
+                            weapon1_button.draw(screen), weapon2_button.draw(screen), weapon3_button.draw(screen)
+                            if get_button3.draw(screen):
+                                weaponlist[2].upgradeWeapon()
+                                paused = False
+                                return ["closed", weaponlist[2]]
+
+                # Event handler
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         run = False

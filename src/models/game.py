@@ -6,7 +6,7 @@ import screeninfo
 from typing import List, Dict
 from player import User
 from gamesettings import GameSettings
-from gameobject import GameObject, PlayerCharacter, Weapon, Enemy, Experience, WeaponKit, HUD, Inventory, Menu
+from gameobject import GameObject, PlayerCharacter, Weapon, Bullet, Enemy, Experience, WeaponKit, HUD, Inventory, Menu
 
 class Game():
     def __init__(self):
@@ -41,11 +41,21 @@ class Game():
 
         self.background: pygame.Vector2  = pygame.Vector2(self.player_pos.x, self.player_pos.y)
 
-        base_weapon = Weapon("base weapon", 1.5, "normal", "single straight", "white", 30, 25, self.player_pos.x, self.player_pos.y)
-        circle_weapon = Weapon("circle weapon", 0.3, "normal", "single circle", "white", 15, 40, 0, 0)
-        self.player_weapons: List[Weapon] = [base_weapon, circle_weapon]
+        rifle = Weapon("High-tech rifle", 1.5, "normal", "single straight", "white", 30, 25, 2.1, self.player_pos.x, self.player_pos.y)
+        energy_ball = Weapon("Energy Ball", 0.1, "energy", "constant circle", "purple", 15, 40, "inf", 0, 0)
+        boomerang = Weapon("Boomerang", 2.5, "normal", "single angled", "gray", 20, 15, "inf", self.player_pos.x, self.player_pos.y)               #TODO
+        #damage_field = Weapon("Damaging Field", 3, "fire", "single aoe", "red", 15, 40, 4, self.player_pos.x, self.player_pos.y)               #TODO
+        #drone = Weapon("Attack Drone", 0.1, "normal", "single pet", "white", 15, 40, "inf", 0, 0)                                                  #TODO
+        #explosion = Weapon("Remote Explosion", 2.5, "energy", "single remote", "yellow", 15, 40, "inf", self.player_pos.x, self.player_pos.y)      #TODO
+        #flamethrower = Weapon("Flamethrower", 0.045, "fire", "constant straight", "orange", 55, 15, 0.5, self.player_pos.x, self.player_pos.y)     #TODO
+        #pistols = Weapon("pistols", 0.2, "normal", "multiple straight", "skyblue", 20, 20, 0.85, self.player_pos.x, self.player_pos.y)            #TODO
+        self.weaponlist = [rifle, energy_ball, boomerang, ]#damage_field, drone, explosion, flamethrower, pistols]
+        self.bulletBox: pygame.sprite.Group = pygame.sprite.Group()
+
+        self.player_weapons: List[Weapon] = [rifle]
         self.WeaponKitGroup: pygame.sprite.Group[WeaponKit] = pygame.sprite.Group()
         self.WeaponKitCooldown = 0
+
         self.onpause = False
     
     def openMenu(self, menu: Menu, screen):
@@ -76,6 +86,8 @@ class Game():
 
                 self.drawBackground(screen) # Draw background and border of the map
 
+                self.attackCycle(screen, mouse_pos, dt)    # Drawing the weapon attacks
+
                 pygame.draw.circle(screen, "red", (self.player_pos.x, self.player_pos.y), self.player_radius) # Draw player
 
                 self.checkHitboxes(screen)
@@ -86,8 +98,6 @@ class Game():
                 self.writeOnScreen(screen, str(self.background.x)+" "+str(self.background.y))  # Write some stuff on the screen
 
                 self.checkKeysPressed(dt, screen) # Update background position based on player movement
-
-                self.attackCycle(screen, mouse_pos, dt)    # Drawing the weapon attacks
 
                 pygame.display.flip() # flip() the display to put your work on screen
 
@@ -157,13 +167,29 @@ class Game():
         for kit in self.WeaponKitGroup:
             if pygame.sprite.collide_rect(kit, self.playerCharacter):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
                 kit.kill()
-                response = self.selectWeapon()
-
-    def selectWeapon(self):
-        time.sleep(1)
+                response = self.selectWeapon(screen)
+    
+    def getRandomWeapons(self):
+        upgradeableWeapons = [weapon for weapon in self.weaponlist if weapon.level < 5]
+        if len(upgradeableWeapons) >= 3:
+            return random.sample(upgradeableWeapons, 3)
+        return upgradeableWeapons
+    
+    def selectWeapon(self, screen):
+        #time.sleep(1)
         self.onpause = True
-        time.sleep(5)           #TODO SELECTING WEAPON PAGE
-        self.onpause = False
+        weaponlist = self.getRandomWeapons()
+        if len(weaponlist) > 0:
+            menu = Menu()
+            menu.state = "weapon_selector"
+            response = menu.openWeaponSelectorMenu(screen, self.settings.screen_width, self.settings.screen_height, self.onpause, weaponlist)
+            if isinstance(response[1], Weapon):
+                if response[1] not in self.player_weapons:
+                    self.player_weapons.append(response[1])
+            if response[0] == "closed":
+                self.onpause = False
+        else:
+            self.onpause = False
 
     def drawBackground(self, screen):
         # fill the screen with a color to wipe away anything from last frame
@@ -216,7 +242,7 @@ class Game():
                 rect = pygame.Rect(randpos.x, randpos.y, kit.width, kit.height)
                 pygame.draw.rect(screen, "gray", rect)
                 pygame.draw.rect(screen, "black", rect, 3)
-                self.WeaponKitCooldown = 10000
+                self.WeaponKitCooldown = 100#00 #TODO MAKE IT A SETTING/MODIFIER
         else:
             self.WeaponKitCooldown -= 1
     
@@ -228,44 +254,124 @@ class Game():
         screen.blit(player_pos_text, (posX, posY))
     
     def attackCycle(self, screen: pygame.Surface, mouse_pos: pygame.Vector2, dt):
-        for weapon in self.player_weapons: #TODO Put them in a sprite group so that I can check for hitboxes later
+        for weapon in self.player_weapons:
             if weapon.cooldown_current <= 0:
-                weapon.setOnCooldown()
-                weapon.animation = True
+                if "circle" in weapon.pattern:
+                    if len(weapon.bullets) < (weapon.level + 1):
+                        weapon.bullets.empty()
+                        weapon.rotation = -360 / (weapon.level + 1)
+                        for ball in range(weapon.level + 1):
+                            weapon.rotation += 360 / (weapon.level + 1)
+
+                            bullet_pos = pygame.Vector2(weapon.position.x, weapon.position.y)
+                            bullet_pos_original = pygame.Vector2(weapon.position_original.x, weapon.position_original.y)
+                            bullet_pos_destination = pygame.Vector2(weapon.position_destination.x, weapon.position_destination.y)
+                            b = Bullet(bullet_pos, bullet_pos_original, bullet_pos_destination, weapon.bulletLifeTime, False, "bullet", weapon.size)
+                            b.addRotation(weapon.rotation)
+                            weapon.bullets.add(b)
+                else:
+                    weapon.position_destination.x = 0
+                    weapon.position_destination.y = 0
+                    weapon.position.x = weapon.position_original.x
+                    weapon.position.y = weapon.position_original.y
+                    weapon.setOnCooldown()
+
+                    bullet_pos = pygame.Vector2(weapon.position.x, weapon.position.y)
+                    bullet_pos_original = pygame.Vector2(weapon.position_original.x, weapon.position_original.y)
+                    bullet_pos_destination = pygame.Vector2(weapon.position_destination.x, weapon.position_destination.y)
+                    b = Bullet(bullet_pos, bullet_pos_original, bullet_pos_destination, weapon.bulletLifeTime, False, "bullet", weapon.size)
+                    if "angled" in weapon.pattern:
+                        b.addAnimationRotation(0)
+                        b.addRotation(weapon.rotation)
+                    if "multiple" in weapon.pattern and random.random() > 0.975 - weapon.level * 0.065:
+                        weapon.cooldown_current = 0.02
+                    weapon.bullets.add(b)
             else:
                 weapon.updateCooldown(dt)
-            if weapon.animation:
+            
+            for bullet in weapon.bullets:
                 if "straight" in weapon.pattern:
-                    if weapon.position_destination.x == 0 and weapon.position_destination.y == 0:
-                        weapon.animation = True
-                        weapon.position_destination = mouse_pos
-                    distance = math.sqrt((weapon.position_destination.x - weapon.position_original.x)**2 + (weapon.position_destination.y - weapon.position_original.y)**2)
-                    sinus = abs((weapon.position_destination.y - weapon.position_original.y)/distance) * self.compare_subtraction(weapon.position_destination.y,weapon.position_original.y)
-                    cosinus = abs((weapon.position_destination.x - weapon.position_original.x)/distance) * self.compare_subtraction(weapon.position_destination.x,weapon.position_original.x)
+                    if bullet.position_destination.x == 0 and bullet.position_destination.y == 0:
+                        bullet.position_destination = mouse_pos
 
-                    weapon.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
+                        if "constant" in weapon.pattern:
+                            bullet.position_destination.x += (random.randint(-1,1) * 100)
+                            bullet.position_destination.y += (random.randint(-1,1) * 100)
+                        
+                        if "multiple" in weapon.pattern:
+                            bullet.position_destination.x += (random.randint(-1,1) * 25)
+                            bullet.position_destination.y += (random.randint(-1,1) * 25)
 
-                    weapon.position.x += cosinus * weapon.speed
-                    weapon.position.y += sinus * weapon.speed
-                    pygame.draw.line(screen, weapon.colour, (weapon.position.x - cosinus * weapon.size, weapon.position.y - sinus * weapon.size), (weapon.position.x, weapon.position.y), 15)
+                    distance = math.sqrt((bullet.position_destination.x - bullet.position_original.x)**2 + (bullet.position_destination.y - bullet.position_original.y)**2)
+                    sinus = abs((bullet.position_destination.y - bullet.position_original.y)/distance) * self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y)
+                    cosinus = abs((bullet.position_destination.x - bullet.position_original.x)/distance) * self.compare_subtraction(bullet.position_destination.x, bullet.position_original.x)
+
+                    bullet.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
+
+                    bullet.position.x += cosinus * weapon.speed
+                    bullet.position.y += sinus * weapon.speed
                     
-                    if weapon.cooldown_current <= 0:
-                        weapon.animation = False
-                        weapon.position_destination.x = 0
-                        weapon.position_destination.y = 0
-                        weapon.position.x = weapon.position_original.x
-                        weapon.position.y = weapon.position_original.y
-                
+                    pygame.draw.line(screen, weapon.colour, (bullet.position.x - cosinus * weapon.size, bullet.position.y - sinus * weapon.size), (bullet.position.x, bullet.position.y), 15)
+                    if weapon.level >= 3:
+                        pygame.draw.line(screen, "yellow", (bullet.position.x - cosinus * weapon.size/1.2, bullet.position.y - sinus * weapon.size/1.2), (bullet.position.x, bullet.position.y), 15)
+                    if weapon.level == 5:
+                        pygame.draw.line(screen, "orange", (bullet.position.x - cosinus * weapon.size/5, bullet.position.y - sinus * weapon.size/5), (bullet.position.x, bullet.position.y), 15)
+
+
+                    if isinstance(bullet.lifeTime, float):
+                        if bullet.lifeTime <= 0:
+                            bullet.remove(weapon.bullets)
+                            bullet.kill()
+                        else:
+                            bullet.lifeTime -= dt
+
                 if "circle" in weapon.pattern:
-                    if weapon.rotation == 360:
-                        weapon.rotation = 0
-                    weapon.position.x = self.player_pos.x + 250 * math.cos(weapon.rotation)
-                    weapon.position.y = self.player_pos.y + 250 * math.sin(weapon.rotation)
-                    weapon.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
+                    if bullet.rotation == 360:
+                        bullet.rotation = 0
 
-                    pygame.draw.circle(screen, weapon.colour, (weapon.position.x, weapon.position.y), weapon.size)
+                    bullet.position.x = self.player_pos.x + weapon.distance * math.cos(bullet.rotation * math.pi / 180)
+                    bullet.position.y = self.player_pos.y + weapon.distance * math.sin(bullet.rotation * math.pi / 180)
+                    bullet.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
 
-                    weapon.rotation += weapon.speed * 0.001
+                    pygame.draw.circle(screen, weapon.colour, (bullet.position.x, bullet.position.y), weapon.size)
+
+                    if weapon.level >= 3:
+                        pygame.draw.circle(screen, "pink", (bullet.position.x, bullet.position.y), weapon.size/2)
+                    if weapon.level == 5:
+                        pygame.draw.circle(screen, "white", (bullet.position.x, bullet.position.y), weapon.size/4)
+
+                    bullet.rotation += weapon.speed * 0.05
+                
+                if "angled" in weapon.pattern:
+                    if bullet.position_destination.x == 0 and bullet.position_destination.y == 0:
+                        bullet.position_destination = mouse_pos
+
+                    center = pygame.Vector2(
+                        (bullet.position_destination.x - bullet.position_original.x) / 2 + bullet.position_original.x, 
+                        (bullet.position_destination.y - bullet.position_original.y) / 2 + bullet.position_original.y, 
+                        )
+
+                    bullet.position.x = center.x + (bullet.position_original.x - bullet.position_destination.x) * math.cos(bullet.rotation * math.pi / 180) * 0.8
+                    bullet.position.y = center.y + (bullet.position_original.y - bullet.position_destination.y) * math.sin(bullet.rotation * math.pi / 180) * 0.8
+
+                    bullet.setPositionBasedOnMovement(self.settings.speed, dt, self.notTouchingBorder(dt))
+
+                    if pygame.sprite.collide_circle(bullet, self.playerCharacter) or bullet.rotation > 40:
+                        rect = pygame.Rect(bullet.position.x, bullet.position.y, weapon.size*3, weapon.size*3)
+                        pygame.draw.arc(screen, weapon.colour, rect, math.radians(0 + bullet.animation_rotation), math.radians(120 + weapon.level * 25 + bullet.animation_rotation), 7 + weapon.level)
+                        
+                        if weapon.level >= 3:
+                            pygame.draw.arc(screen, "blue", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2 + weapon.level)
+
+                        if weapon.level == 5:
+                            pygame.draw.arc(screen, "indianred3", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2)
+
+                    bullet.rotation += weapon.speed * 0.1 * (1 + abs(math.sin(bullet.rotation * math.pi / 180)))
+                    bullet.animation_rotation += weapon.speed * 0.3 * (1 + abs(math.sin(bullet.rotation * math.pi / 180)))
+
+                    if (pygame.sprite.collide_circle(bullet, self.playerCharacter) and bullet.rotation >= 180 ) or bullet.rotation >= 410:
+                        bullet.remove(weapon.bullets)
+                        bullet.kill()
         
     def compare_subtraction(self, a, b):
         result = a - b
