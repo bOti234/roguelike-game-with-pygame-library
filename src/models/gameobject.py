@@ -17,6 +17,7 @@ class GameObject(pygame.sprite.Sprite):
     def setPositionBasedOnMovement(self, speed, dt, gate):
         keys = pygame.key.get_pressed()
         #TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
+
         if keys[pygame.K_w] and keys[pygame.K_a] and "up" not in gate and "left" not in gate:
             self.position.y += speed * dt / 2**(1/2)
             self.position.x += speed * dt / 2**(1/2)
@@ -108,17 +109,30 @@ class Weapon(GameObject):
             self.level += 1
 
         if "straight" in self.pattern:
-            self.speed += 5
-            self.size += 3
+            self.speed += 4
+            self.size += 2
         
-        if "rifle" in self.name:
+        if self.name == "High-tech Rifle":
             self.cooldown_max -= 0.1 * (5 - self.level)
-            self.speed -= 1
-            self.size -= 1
             if self.level == 3:
                 self.pattern = "multiple straight"
             if self.level == 5:
                 self.speed -= 3
+        
+        if self.name == "Flamethrower":
+            self.cooldown_max -= 0.02
+            self.speed -= (1 - self.level)
+            self.size += 1
+            self.bulletLifeTime -= 0.025
+            if self.level == 5:
+                self.cooldown_max += 0.01
+                self.bulletLifeTime += 0.02
+        
+        if self.name == "Pistols":
+            self.speed -= 3
+            self.cooldown_max -= 0.02
+            self.bulletLifeTime += 0.05
+            
         
         if "circle" in self.pattern:
             self.speed *= 1.1

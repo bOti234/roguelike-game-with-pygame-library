@@ -54,3 +54,11 @@ Github repository for the second assignment of Programming II.
 ### Update v1.0.5
 
 -Fixed formatting of readme.
+
+### Update v1.0.6
+
+-Added Flamethrower scaling and design.
+
+-Added Pistols mechanics, scaling and design.
+
+-Started working on Drone following the player. (Still not right)
