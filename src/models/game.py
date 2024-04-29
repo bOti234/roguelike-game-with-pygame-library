@@ -42,15 +42,15 @@ class Game():
         self.background: pygame.Vector2  = pygame.Vector2(self.player_pos.x, self.player_pos.y)
 
         rifle = Weapon("High-tech Rifle", 1.5, "normal", "single straight", "white", 30, 25, 2.1, self.player_pos.x, self.player_pos.y)
-        energy_ball = Weapon("Energy Ball", 0.1, "energy", "constant circle", "purple", 15, 40, "inf", 0, 0)
-        boomerang = Weapon("Boomerang", 2.5, "normal", "single angled", "gray", 20, 15, "inf", self.player_pos.x, self.player_pos.y)
+        #energy_ball = Weapon("Energy Ball", 0.1, "energy", "constant circle", "purple", 15, 40, "inf", 0, 0)
+        #boomerang = Weapon("Boomerang", 2.5, "normal", "single angled", "gray", 20, 15, "inf", self.player_pos.x, self.player_pos.y)
         flamethrower = Weapon("Flamethrower", 0.1, "fire", "constant straight", "orange", 45, 10, 0.3, self.player_pos.x, self.player_pos.y)
         #damage_field = Weapon("Damaging Field", 3, "fire", "single aoe", "red", 15, 40, 4, self.player_pos.x, self.player_pos.y)                   #TODO
         #drone = Weapon("Attack Drone", 0.1, "normal", "single pet", "white", 15, 40, "inf", self.player_pos.x, self.player_pos.y)                   #TODO                          #TODO
         #explosion = Weapon("Remote Explosion", 2.5, "energy", "single remote", "yellow", 15, 40, "inf", self.player_pos.x, self.player_pos.y)      #TODO
         pistols = Weapon("Pistols", 0.2, "normal", "multiple straight", "skyblue", 20, 20, 0.35, self.player_pos.x, self.player_pos.y)             #TODO
 
-        self.weaponlist = [rifle, energy_ball, boomerang, flamethrower, pistols]#rifle, energy_ball, boomerang, flamethrower, damage_field, drone, explosion, pistols]
+        self.weaponlist = [rifle, flamethrower, pistols]#rifle, energy_ball, boomerang, flamethrower, damage_field, drone, explosion, pistols]
         self.bulletBox: pygame.sprite.Group = pygame.sprite.Group()
 
         self.player_weapons: List[Weapon] = [rifle]
@@ -342,11 +342,24 @@ class Game():
                             pygame.draw.line(screen, "orange", (bullet.position.x - cosinus * weapon.size/5, bullet.position.y - sinus * weapon.size/5), (bullet.position.x, bullet.position.y), 15)
                     
                     if weapon.name == "Flamethrower":
-                        pygame.draw.line(screen, weapon.colour, (bullet.position.x - cosinus * weapon.size, bullet.position.y - sinus * weapon.size), (bullet.position.x, bullet.position.y), 15 + round(weapon.size * 0.02 * weapon.level * 5))
-                        if weapon.level >= 3:
-                            pygame.draw.line(screen, "orange2", (bullet.position.x - cosinus * weapon.size/1.2, bullet.position.y - sinus * weapon.size/1.2), (bullet.position.x, bullet.position.y), 15 + round(weapon.size * 0.02 * weapon.level * 5))
-                        if weapon.level == 5:
-                            pygame.draw.line(screen, "orange3", (bullet.position.x - cosinus * weapon.size/5, bullet.position.y - sinus * weapon.size/5), (bullet.position.x, bullet.position.y), 15 + round(weapon.size * 0.02 * weapon.level * 5))
+                        width = weapon.image_projectile.get_width()
+                        height = weapon.image_projectile.get_height()
+                        image = pygame.transform.scale(weapon.image_projectile, (int(width * (0.25+weapon.level*0.08)), int(height * (0.55+weapon.level*0.08))))
+                        image = pygame.transform.rotate(image, 180+math.acos(sinus)*self.compare_subtraction(bullet.position_destination.x, bullet.position_original.x)*180/math.pi)
+                        image_x = bullet.position.x - cosinus * weapon.size
+                        image_y = bullet.position.y - sinus * weapon.size
+                        if self.compare_subtraction(bullet.position_destination.x, bullet.position_original.x) == -1:
+                            image_x -= image.get_width() * 0.9
+                        if self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y) == -1:
+                            image_y -= image.get_height() * 0.9
+                        rect = image.get_rect()
+                        rect.topleft = (image_x, image_y)
+                        screen.blit(image, (rect.x, rect.y))
+                        #pygame.draw.line(screen, weapon.colour, (bullet.position.x - cosinus * weapon.size, bullet.position.y - sinus * weapon.size), (bullet.position.x, bullet.position.y), 15 + round(weapon.size * 0.02 * weapon.level * 5))
+                        #if weapon.level >= 3:
+                        #    pygame.draw.line(screen, "orange2", (bullet.position.x - cosinus * weapon.size/1.2, bullet.position.y - sinus * weapon.size/1.2), (bullet.position.x, bullet.position.y), 15 + round(weapon.size * 0.02 * weapon.level * 5))
+                        #if weapon.level == 5:
+                        #    pygame.draw.line(screen, "orange3", (bullet.position.x - cosinus * weapon.size/5, bullet.position.y - sinus * weapon.size/5), (bullet.position.x, bullet.position.y), 15 + round(weapon.size * 0.02 * weapon.level * 5))
                     
                     if weapon.name == "Pistols":
                         pygame.draw.line(screen, weapon.colour, (bullet.position.x - cosinus * weapon.size, bullet.position.y - sinus * weapon.size), (bullet.position.x, bullet.position.y), 15)

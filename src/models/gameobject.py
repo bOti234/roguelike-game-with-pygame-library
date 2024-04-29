@@ -90,9 +90,12 @@ class Weapon(GameObject):
     def loadImages(self):
         if pygame.get_init():
             dirname = os.path.dirname(__file__)
-            filename = os.path.join(dirname, '../../images/weapons/')
-            self.image_base = pygame.image.load(filename + "/"+str(self.name)+"_1.jpg").convert_alpha()
-            self.image_maxed = pygame.image.load(filename + "/"+str(self.name)+"_2.jpg").convert_alpha()
+            filename_weapon = os.path.join(dirname, '../../images/weapons/')
+            self.image_base = pygame.image.load(filename_weapon + "/"+str(self.name)+"_1.jpg").convert_alpha()
+            self.image_maxed = pygame.image.load(filename_weapon + "/"+str(self.name)+"_2.jpg").convert_alpha()
+            if self.name == "Flamethrower":
+                filename_projectile = os.path.join(dirname, '../../images/projectiles/')
+                self.image_projectile = pygame.image.load(filename_projectile + "/"+str(self.name)+"_projectile.png").convert_alpha()
 
     def updateCooldown(self, dt):
         if self.cooldown_current > 0:

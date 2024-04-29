@@ -62,3 +62,11 @@ Github repository for the second assignment of Programming II.
 -Added Pistols mechanics, scaling and design.
 
 -Started working on Drone following the player. (Still not right)
+
+### Update v.1.0.7
+
+-Added Flamethrower projectile image.
+
+-Updated Flamethrower projectiles when shot.
+
+-Updated scaling of the level of Flamethrower.
