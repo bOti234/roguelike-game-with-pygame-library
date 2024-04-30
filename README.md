@@ -63,10 +63,26 @@ Github repository for the second assignment of Programming II.
 
 -Started working on Drone following the player. (Still not right)
 
-### Update v.1.0.7
+### Update v1.0.7
 
 -Added Flamethrower projectile image.
 
 -Updated Flamethrower projectiles when shot.
 
 -Updated scaling of the level of Flamethrower.
+
+### Update v1.1.0
+
+-Added enemies, spawning and moving enemies. Added scaling to enemies.
+
+-Added damage, damage scaling to weapons and enemies.
+
+-Added collision checking between bullets and enemies. When collision happens, the damage of the bullet is removed from the enemies health.
+
+-When an enemy is hit, it changes colour and it cannot be damaged by the same bullet for a short period of time.
+
+-When enemies health drops to (or below) zero, the enemy is removed.
+
+-Added basic timer, game level scales with each 30/60 seconds.
+
+-Finished drone follow, added drone scaling, bullet mechanics.
