@@ -56,6 +56,8 @@ class Game():
         self.EnemyGroup: pygame.sprite.Group[Enemy] = pygame.sprite.Group()
         self.experienceGroup: pygame.sprite.Group[Experience] = pygame.sprite.Group()
 
+        self.WeaponKitGroup.add(WeaponKit(pygame.Vector2(self.player.position.x + 200, self.player.position.y + 200), ))
+
         self.WeaponKitCooldown = 0
         self.MagnetCooldown = 0
         self.EnemyCooldown = 0
@@ -69,7 +71,80 @@ class Game():
             value = 1,
             cooldown = 5
         )
-        return [regen]
+
+        berserk = Passive(
+            name = "Berserk",
+            value = 1.2,
+            cooldown = 0
+        )
+
+        crit = Passive(
+        name = "Crit Chance",
+        value = 1.1,
+        cooldown = 0
+        )
+
+        dodge = Passive(
+            name = "Dodge",
+            value = 1,
+            cooldown = 7
+        )
+
+        gunslinger = Passive(
+            name = "Gunslinger",
+            value = 5,
+            cooldown = 0
+        )
+
+        barrier = Passive(
+            name = "Protective Barrier",
+            value = 10,
+            cooldown = 9
+        )
+
+        aura = Passive(
+            name = "Slowing Aura",
+            value = 1.2,
+            cooldown = 0
+        )
+
+        strength = Passive(
+            name = "Greater Strength",
+            value = 1.05,
+            cooldown = 0
+        )
+
+        vitality = Passive(
+            name = "Greater Vitality",
+            value = 10,
+            cooldown = 0
+        )
+
+        wisdom = Passive(
+            name = "Enhanced Wisdom",
+            value = 1.08,
+            cooldown = 0
+        )
+
+        # reach = Passive(
+        #     name = "Increased Reach",
+        #     value = 1,
+        #     cooldown = 0
+        # )
+
+        # warcry = Passive(
+        #     name = "Taunting Warcry",
+        #     value = 1,
+        #     cooldown = 0
+        # )
+
+        # crowdcontrol = Passive(
+        #      name = "Crowd Control",
+        #      value = 1,
+        #      cooldown = 0
+        # )
+
+        return [regen, berserk, crit, dodge, gunslinger, barrier, aura, strength, vitality, wisdom] #regen, berserk, crit, dodge, gunslinger, barrier, aura, strength, vitality, wisdom
     
     def getWeapons(self):
         rifle = Weapon(
@@ -81,12 +156,12 @@ class Game():
             size = 30, 
             speed = 25, 
             bulletlifetime = 2.1, 
-            damage = 10, 
+            damage = 15, 
             position = pygame.Vector2(self.player.position.x, self.player.position.y)
         )
 
-        energy_ball = Weapon(
-            name = "Energy Ball", 
+        orb = Weapon(
+            name = "Energy Orb", 
             cooldown_max=0.1, 
             dmgtype = "energy", 
             pattern = "constant circle", 
@@ -94,7 +169,7 @@ class Game():
             size = 15, 
             speed = 40, 
             bulletlifetime = "inf", 
-            damage = 15, 
+            damage = 15,
             position = pygame.Vector2(0, 0)
         )
 
@@ -137,7 +212,7 @@ class Game():
             position = pygame.Vector2(self.player.position.x, self.player.position.y)
         )
 
-        drone = Weapon( #TODO
+        drone = Weapon(
             name = "Attack Drone", 
             cooldown_max = 0.01, 
             dmgtype = "laser", 
@@ -176,7 +251,7 @@ class Game():
             position = pygame.Vector2(self.player.position.x, self.player.position.y)
         )
 
-        return [drone]#rifle, energy_ball, boomerang, flamethrower, damage_field, drone, explosion, pistols]
+        return [boomerang]#rifle, orb, boomerang, flamethrower, damage_field, drone, explosion, pistols]
 
     def openMenu(self, menu: Menu):
         self.onpause = True
@@ -440,11 +515,11 @@ class Game():
                         random.randint(round(self.background.x - self.settings.screen_width), round(self.background.x - self.settings.screen_width + self.settings.game_size**2 * 2)), 
                         random.randint(round(self.background.y - self.settings.screen_height), round(self.background.y - self.settings.screen_height + self.settings.game_size**2 * 2))
                         )
-                    kit = WeaponKit(randpos, 50, 50)
+                    kit = WeaponKit(randpos)
                     self.WeaponKitGroup.add(kit)
-                    self.WeaponKitCooldown = 30  - (self.time // 30)    #90 sec        #TODO MAKE IT A SETTING/MODIFIER
-                    if self.WeaponKitCooldown < 15:
-                            self.WeaponKitCooldown = 15
+                    self.WeaponKitCooldown = 60  - (self.time // 30)  #TODO MAKE IT A SETTING/MODIFIER
+                    if self.WeaponKitCooldown < 10:
+                            self.WeaponKitCooldown = 10
                 else:
                     self.WeaponKitCooldown = 5
             else:
@@ -593,6 +668,9 @@ class Game():
 
     def attackCycle(self, mouse_pos: pygame.Vector2):
         for weapon in self.player_weapons:
+            if weapon.name == "Flamethrower" and weapon.image_projectile == None:
+                weapon.loadImages()
+                print(weapon.image_base)
             if "pet" in weapon.pattern:
                 if weapon.position_destination.x == 0 and weapon.position_destination.y == 0:
                     weapon.position_destination.x = self.player.position.x + 100
@@ -783,7 +861,13 @@ class Game():
                     bullet.position.x = center.x + (bullet.position_original.x - bullet.position_destination.x) * math.cos(bullet.rotation * math.pi / 180) * 0.8
                     bullet.position.y = center.y + (bullet.position_original.y - bullet.position_destination.y) * math.sin(bullet.rotation * math.pi / 180) * 0.8
 
+                    tempX = bullet.position.x
+                    tempY = bullet.position.y
                     bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+                    bullet.position_destination.x -= (tempX - bullet.position.x)
+                    bullet.position_destination.y -= (tempY - bullet.position.y)
+                    bullet.position_original.x -= (tempX - bullet.position.x)
+                    bullet.position_original.y -= (tempY - bullet.position.y)
 
                     if pygame.sprite.collide_circle(bullet, self.player) or bullet.rotation > 40:
                         rect = pygame.Rect(bullet.position.x, bullet.position.y, weapon.size*3, weapon.size*3)

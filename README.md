@@ -114,3 +114,42 @@ Github repository for the second assignment of Programming II.
 -Added a few images for the passive skills and one for the talents.
 
 -Started working on the description for the passive skills.
+
+### Update v1.1.2
+
+-Finished description of passives. Started working on the description of weapons.
+
+-Adjusted balance of all weapons and weaponkit spawn rate.
+
+-Moved images around in the selector menu. Added description in the menu.
+
+-Started working on the movement of boomerang.
+
+-Added todo list in readme.
+
+
+## TODO list:
+
+-Creating a buffs (and debuffs) list/dict/class for the player where I manage all the stat buffs for weapons, bullets, kits, player.
+
+-Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
+
+-Adding images for the rest of the talents.
+
+-Making the design of the selectors better (e.g., fixing image sizes, positions, making letters larger, creating borders for the boxes, other colours)
+
+-Adding an option to upgrade damage / attack speed for the weaponkit when every weapon upgrade is maxed out.
+
+-Adding an option to upgrade player speed / heal player / create a weapon kit when every other passive is maxed out.
+
+-Fixing balance of enemies. (stats and spawn rate)
+
+-Fixing balance of rifle and orb.
+
+-Fixing movement and hitbox of boomerang.
+
+-Implementing all passives.
+
+-Creating all talent images. Implementing all talents.
+
+-There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)

@@ -1,13 +1,13 @@
 {"Health Regeneration":"f'Restores {self.value}/{self.value + 1}/{self.value + 2}/{self.value + 3}/{self.value + 4} health every {self.cooldown_max}/{self.cooldown_max - 1}/{self.cooldown_max - 2}/{self.cooldown_max - 3}/{self.cooldown_max - 4} second(s)'"}
-{"Berserk": "f'You deal {(self.value - 1) * 100}/{(self.value - 1 + 0.2) * 100}/{(self.value - 1 + 0.4) * 100}/{(self.value - 1 + 0.6) * 100}/{(self.value - 1 + 0.8) * 100}% more damage, but enemies also gain this damage increase.'"}
-{"Crit Chance": "f''"}
-{"Dodge": "f''"}
-{"Gunslinger": "f''"}
-{"Protective Barrier": "f''"}
-{"Slowing Aura": "f''"}
-{"Greater Strength": "f''"}
-{"Greater Vitality": "f''"}
-{"Enhanced Wisdom": "f''"}
+{"Berserk": "f'You deal {round((self.value - 1) * 100)}/{round((self.value - 1 + 0.2) * 100)}/{round((self.value - 1 + 0.4)) * 100}/{round((self.value - 1 + 0.6) * 100)}/{round((self.value - 1 + 0.8) * 100)}% more damage, but enemies also gain this damage increase.'"}
+{"Crit Chance": "f'Gives {round((self.value - 1) * 100)}/{round((self.value - 1 + 0.1) * 100)}/{round((self.value - 1 + 0.2)) * 100}/{round((self.value - 1 + 0.3) * 100)}/{round((self.value - 1 + 0.4) * 100)}% chance to double your damage.'"}
+{"Dodge": "f'Gives 25% chance to negate the damage when being hit. {self.cooldown_max}/{self.cooldown_max - 1}/{self.cooldown_max - 2}/{self.cooldown_max - 3}/{self.cooldown_max - 4} second(s) cooldown. Can store up to {self.value}/{self.value + 1}/{self.value + 2}/{self.value + 3}/{self.value + 4} charges.'"}
+{"Gunslinger": "f'Weapon kits spawn {self.value}/{self.value + 5}/{self.value + 10}/{self.value + 15}/{self.value + 20} seconds sooner, but not sooner than every 10 seconds. Whenever you upgrade this, one kit spawns nearby you.'"}
+{"Protective Barrier": "f'Creates a barrier around you that can withstand {self.value}/{self.value + 5}/{self.value + 10}/{self.value + 15}/{self.value + 20} damage. When the barrier is damaged, it will regenerate to full in {self.cooldown_max}/{self.cooldown_max - 1}/{self.cooldown_max - 2}/{self.cooldown_max - 3}/{self.cooldown_max - 4} second(s).'"}
+{"Slowing Aura": "f'Creates a field around you that slows enemy movement speed by {round((self.value - 1) * 100)}/{round((self.value - 1 + 0.1) * 100)}/{round((self.value - 1 + 0.2) * 100)}/{round((self.value - 1 + 0.3) * 100)}/{round((self.value - 1 + 0.4) * 100)}%. The fields range is {round(self.value * 10/12 + 99)}/{round(self.value * 10/12 + 149)}/{round(self.value * 10/12 + 199)}/{round(self.value * 10/12 + 249)}/{round(self.value * 10/12 + 299)} units.'"}
+{"Greater Strength": "f'You deal {round((self.value - 1) * 100)}/{round((self.value - 1 + 0.05) * 100)}/{round((self.value - 1 + 0.1) * 100)}/{round((self.value - 1 + 0.15) * 100)}/{round((self.value - 1 + 0.2) * 100)}% more damage.'"}
+{"Greater Vitality": "f'Your health is increased by {self.value}/{self.value + 10}/{self.value + 20}/{self.value + 30}/{self.value + 40}. On the final level it is further increased by 20%.'"}
+{"Enhanced Wisdom": "f'Experience orbs you pick up give you {round((self.value - 1) * 100)}/{round((self.value - 1 + 0.08) * 100)}/{round((self.value - 1 + 0.16) * 100)}/{round((self.value - 1 + 0.24) * 100)}/{round((self.value - 1 + 0.32) * 100)}% more experience.'"}
 {"Increased Reach": "f''"}
 {"Taunting Warcry": "f''"}
 {"Crowd Control": "f''"}
