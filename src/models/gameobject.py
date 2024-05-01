@@ -9,7 +9,11 @@ class GameObject(pygame.sprite.Sprite):
         self.position: pygame.Vector2 = position
         self.width = width
         self.height = height
-        self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
+        if self.objtype in ["enemy", "player", "experience"]:
+            self.radius = self.width / 2
+            self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
+        else:
+            self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
     
     def setHitbox(self):
         pass
@@ -48,10 +52,48 @@ class GameObject(pygame.sprite.Sprite):
         self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
 
 class PlayerCharacter(GameObject):
-    def __init__(self, radius, position):
+    def __init__(self, radius, position: pygame.Vector2, speed):
         objtype = "player"
-        super().__init__(objtype, pygame.Vector2(position.x-radius, position.y-radius), radius*2, radius*2)
-        self.radius = radius
+        super().__init__(objtype, pygame.Vector2(position.x, position.y), radius*2, radius*2)
+
+        self.level = 1
+        self.health_max = 50 + (self.level - 1) * 10
+        self.health_current = self.health_max
+        self.hitCooldown = 0
+        self.speed = speed + (self.level - 1) * 25
+        self.experience_max: int = 150
+        self.experience_current: int = 0
+        self.experience_queue: int = 0
+    
+    def updateExperience(self):
+        if self.experience_queue > 0:
+            self.experience_current += ((self.experience_queue // 100) + 1)
+            self.experience_queue -= ((self.experience_queue // 100) + 1)
+        if self.experience_current >= self.experience_max:
+            self.level += 1
+            self.experience_current -= int(self.experience_max)
+            self.experience_max = int(round(self.experience_max * 1.2))
+            return self
+        return None
+
+class Passive():
+    def __init__(self, name, value, cooldown):
+        self.name = name
+        self.value = value
+        self.cooldown_max = cooldown
+        self.cooldown_current = 0
+        self.description = self.getDescription()
+    
+    def upgradeItem(self):
+        pass
+
+    def getDescription(self):
+        dirname = os.path.dirname(__file__)
+        filename_passive = os.path.join(dirname, '../../media/descriptions/passives.txt')
+        with open(filename_passive, "r") as f:
+            cont = {}
+            [cont.update(eval(line)) for line in f.readlines()]
+        return eval(cont[self.name])
 
 class Weapon(GameObject):
     def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], damage: float, position: pygame.Vector2):
@@ -94,11 +136,11 @@ class Weapon(GameObject):
     def loadImages(self):
         if pygame.get_init():
             dirname = os.path.dirname(__file__)
-            filename_weapon = os.path.join(dirname, '../../images/weapons/')
+            filename_weapon = os.path.join(dirname, '../../media/images/weapons/')
             self.image_base = pygame.image.load(filename_weapon + "/"+str(self.name)+"_1.jpg").convert_alpha()
             self.image_maxed = pygame.image.load(filename_weapon + "/"+str(self.name)+"_2.jpg").convert_alpha()
             if self.name == "Flamethrower":
-                filename_projectile = os.path.join(dirname, '../../images/projectiles/')
+                filename_projectile = os.path.join(dirname, '../../media/images/projectiles/')
                 self.image_projectile = pygame.image.load(filename_projectile + "/"+str(self.name)+"_projectile.png").convert_alpha()
 
     def updateCooldown(self, dt):
@@ -111,7 +153,7 @@ class Weapon(GameObject):
         if self.cooldown_current <= 0:
             self.cooldown_current = self.cooldown_max
     
-    def upgradeWeapon(self):
+    def upgradeItem(self):
         if self.level < 5:
             self.level += 1
 
@@ -156,20 +198,18 @@ class Weapon(GameObject):
         
         if "pet" in self.pattern:
             if self.level > 1:
-                self.damage += 0.5
+                self.damage += 0.15 * self.level
                 self.range += 50
                 self.speed += 10
                 self.size += 2.5
-
-            if self.level == 4:
-                self.damage -= 0.5
                 
             if self.level == 5:
                 self.range += 50
     
 class Bullet(GameObject):
-    def __init__(self, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, crit: bool, objtype: str, width_and_height: int):
+    def __init__(self, weaponnanme: str, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, crit: bool, objtype: str, width_and_height: int):
         super().__init__(objtype, position, width_and_height, width_and_height)
+        self.weaponname = weaponnanme
         self.position = position
         self.position_original = position_original
         self.position_destination = position_destination
@@ -187,7 +227,7 @@ class Bullet(GameObject):
 
 
 class Enemy(GameObject):
-    def __init__(self, position: pygame.Vector2, level = 1, radius: float = 20, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy"):
+    def __init__(self, position: pygame.Vector2, level = 1, radius: float = 20, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal"):
         objtype = "enemy"
         width_and_height = radius * 2
         super().__init__(objtype, position, width_and_height, width_and_height)
@@ -203,15 +243,34 @@ class Enemy(GameObject):
         self.damage = damage + (self.level - 1) * 1
         self.speed = speed + (self.level - 1) * 2
         self.weakness = weakness
+        self.type = type
         self.hitCooldown = 0
 
 class Experience(GameObject):
-    def __init__(self):
-        pass
+    def __init__(self, position: pygame.Vector2, radius, colour, value):
+        objtype = "experience"
+        width_and_height = radius * 2
+        super().__init__(objtype, position, width_and_height, width_and_height)
+
+        self.position_original = pygame.Vector2(position.x, position.y)
+        self.position_destination = pygame.Vector2(0,0)
+        self.speed = 10
+        self.radius = radius
+        self.colour = colour
+        self.value = value
+        self.min_distance = 200
+    
+    def setMinDistance(self, dist):
+        self.min_distance = dist
 
 class WeaponKit(GameObject):
     def __init__(self, randpos, width, height):
         objtype = "weaponkit"
+        super().__init__(objtype, randpos, width, height)
+
+class Magnet(GameObject):
+    def __init__(self, randpos, width, height):
+        objtype = "magnet"
         super().__init__(objtype, randpos, width, height)
 
 class HUD(GameObject):
@@ -234,7 +293,7 @@ class Menu(HUD):
         if pygame.get_init():
 
             dirname = os.path.dirname(__file__)
-            filename = os.path.join(dirname, '../../images/buttons/')
+            filename = os.path.join(dirname, '../../media/images/buttons/')
             resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
             options_img = pygame.image.load(filename+"/button_options.png").convert_alpha()
             quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
@@ -289,40 +348,40 @@ class Menu(HUD):
                         run = False
 
                 pygame.display.update()
-    
-    def openWeaponSelectorMenu(self, screen, screen_width: int, screen_height: int, paused: bool, weaponlist: List[Weapon]):
+
+    def openItemSelectorMenu(self, screen, screen_width: int, screen_height: int, paused: bool, itemlist: List[Union[Weapon, Passive]]):
         if pygame.get_init():
             # Load button images for menu buttons selection
-            for weapon in weaponlist:
-                weapon.loadImages()
+            for item in itemlist:
+                item.loadImages()
 
             dirname = os.path.dirname(__file__)
-            filename = os.path.join(dirname, '../../images/buttons/')
+            filename = os.path.join(dirname, '../../media/images/buttons/')
             get_img = pygame.image.load(filename + "/button_select.png").convert_alpha()
 
             # Create button instances for weapon selection
             images: List[pygame.Surface] = []
-            for i in range(len(weaponlist)):
-                if weaponlist[i].level < 4:
-                    images.append(weaponlist[i].image_base)
+            for i in range(len(itemlist)):
+                if itemlist[i].level < 4:
+                    images.append(itemlist[i].image_base)
                 else:
-                    images.append(weaponlist[i].image_maxed)
+                    images.append(itemlist[i].image_maxed)
 
-            if len(weaponlist) == 1:
-                weapon1_button = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2, screen_height / 4 + 125, images[0], 0.1)
+            if len(itemlist) == 1:
+                item_button1 = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2, screen_height / 4 + 125, images[0], 0.1)
                 get_button1 = Button(screen_width / 2 - get_img.get_width() / 2, screen_height / 4 + 425, get_img, 1)
             
-            elif len(weaponlist) == 2:
-                weapon1_button = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 - 150, screen_height / 4 + 125, images[0], 0.1)
-                weapon2_button = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2 + 150, screen_height / 4 + 125, images[1], 0.1)
+            elif len(itemlist) == 2:
+                item_button1 = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 - 150, screen_height / 4 + 125, images[0], 0.1)
+                item_button2 = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2 + 150, screen_height / 4 + 125, images[1], 0.1)
 
                 get_button1 = Button(screen_width / 2 - get_img.get_width() / 2 - 150, screen_height / 4 + 425, get_img, 1)
                 get_button2 = Button(screen_width / 2 - get_img.get_width() / 2 + 150, screen_height / 4 + 425, get_img, 1)
             
-            elif len(weaponlist) == 3:
-                weapon1_button = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 - 300, screen_height / 4 + 125, images[0], 0.1)
-                weapon2_button = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2, screen_height / 4 + 125, images[1], 0.1)
-                weapon3_button = Button(screen_width / 2 - images[2].get_width() * 0.1 / 2 + 300, screen_height / 4 + 125, images[2], 0.1)
+            elif len(itemlist) == 3:
+                item_button1 = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 - 300, screen_height / 4 + 125, images[0], 0.1)
+                item_button2 = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2, screen_height / 4 + 125, images[1], 0.1)
+                item_button3 = Button(screen_width / 2 - images[2].get_width() * 0.1 / 2 + 300, screen_height / 4 + 125, images[2], 0.1)
 
                 get_button1 = Button(screen_width / 2 - get_img.get_width() / 2 - 300, screen_height / 4 + 425, get_img, 1)
                 get_button2 = Button(screen_width / 2 - get_img.get_width() / 2, screen_height / 4 + 425, get_img, 1)
@@ -337,26 +396,26 @@ class Menu(HUD):
                 # Check if game is paused
                 if paused:
                     # Check menu state
-                    if self.state == "weapon_selector":
-                        # Draw weapon selection buttons
-                        if len(weaponlist) > 0:
-                            weapon1_button.draw(screen)
+                    if self.state == "weapon_selector" or self.state == "passive_selector":
+                        # Draw item selection buttons
+                        if len(itemlist) > 0:
+                            item_button1.draw(screen)
                             if get_button1.draw(screen):
-                                weaponlist[0].upgradeWeapon()
+                                itemlist[0].upgradeItem()
                                 paused = False
-                                return ["closed", weaponlist[0]]
-                        if len(weaponlist) > 1:
-                            weapon1_button.draw(screen), weapon2_button.draw(screen)
+                                return ["closed", itemlist[0]]
+                        if len(itemlist) > 1:
+                            item_button1.draw(screen), item_button2.draw(screen)
                             if get_button2.draw(screen):
-                                weaponlist[1].upgradeWeapon()
+                                itemlist[1].upgradeItem()
                                 paused = False
-                                return ["closed", weaponlist[1]]
-                        if len(weaponlist) > 2:
-                            weapon1_button.draw(screen), weapon2_button.draw(screen), weapon3_button.draw(screen)
+                                return ["closed", itemlist[1]]
+                        if len(itemlist) > 2:
+                            item_button1.draw(screen), item_button2.draw(screen), item_button3.draw(screen)
                             if get_button3.draw(screen):
-                                weaponlist[2].upgradeWeapon()
+                                itemlist[2].upgradeItem()
                                 paused = False
-                                return ["closed", weaponlist[2]]
+                                return ["closed", itemlist[2]]
 
                 # Event handler
                 for event in pygame.event.get():

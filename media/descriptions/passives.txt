@@ -1,0 +1,13 @@
+{"Health Regeneration":"f'Restores {self.value}/{self.value + 1}/{self.value + 2}/{self.value + 3}/{self.value + 4} health every {self.cooldown_max}/{self.cooldown_max - 1}/{self.cooldown_max - 2}/{self.cooldown_max - 3}/{self.cooldown_max - 4} second(s)'"}
+{"Berserk": "f'You deal {(self.value - 1) * 100}/{(self.value - 1 + 0.2) * 100}/{(self.value - 1 + 0.4) * 100}/{(self.value - 1 + 0.6) * 100}/{(self.value - 1 + 0.8) * 100}% more damage, but enemies also gain this damage increase.'"}
+{"Crit Chance": "f''"}
+{"Dodge": "f''"}
+{"Gunslinger": "f''"}
+{"Protective Barrier": "f''"}
+{"Slowing Aura": "f''"}
+{"Greater Strength": "f''"}
+{"Greater Vitality": "f''"}
+{"Enhanced Wisdom": "f''"}
+{"Increased Reach": "f''"}
+{"Taunting Warcry": "f''"}
+{"Crowd Control": "f''"}

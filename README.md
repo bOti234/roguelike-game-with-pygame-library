@@ -86,3 +86,31 @@ Github repository for the second assignment of Programming II.
 -Added basic timer, game level scales with each 30/60 seconds.
 
 -Finished drone follow, added drone scaling, bullet mechanics.
+
+### Update v1.1.1
+
+-Added experience orbs, made them spawn when an enemy is defeated. Made them disappear when they collidee with the player.
+
+-When the player moves close enough to an experience orb, the orb will flow to the player.
+
+-Added a magnet item, that randomly spawns every 120-60 seconds. When picked up by the player, all experience orbs from almost anywhere fly towards the player.
+
+-Added experience stat to player, leveling function when they pick up enough experience orbs.
+
+-When the player levels up, the amount of experience will be greater to reach the next level than the last one. 
+
+-Added scaling the player stats for speed, and health.
+
+-Added damage function to enemies when they touch the player. When the player is damaged, they cannot be damaged for 1 second.
+
+-Added experience bar on the bottom side of the screen. Also added health bar under the player.
+
+-Made the experience bar change based on the percentage of the current experience / required experience for the next level.
+
+-Made the health bar change based on the current health / max health of the player.
+
+-Started working on passive talents and skills. When the player levels up, they will be able to choose from 3 options to either get a new skill or upgrade a previous one.
+
+-Added a few images for the passive skills and one for the talents.
+
+-Started working on the description for the passive skills.
