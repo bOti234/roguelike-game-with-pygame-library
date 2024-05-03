@@ -251,7 +251,7 @@ class Game():
             position = pygame.Vector2(self.player.position.x, self.player.position.y)
         )
 
-        return [boomerang]#rifle, orb, boomerang, flamethrower, damage_field, drone, explosion, pistols]
+        return [boomerang]#rifle, orb, boomerang, flamethrower, damage_field, drone, explosion, pistols
 
     def openMenu(self, menu: Menu):
         self.onpause = True
@@ -853,13 +853,36 @@ class Game():
                         bullet.position_destination.x = mouse_pos.x
                         bullet.position_destination.y = mouse_pos.y
 
+                    bullet.position_original.x = self.player.position.x
+                    bullet.position_original.y = self.player.position.y
+                    
                     center = pygame.Vector2(
                         (bullet.position_destination.x - bullet.position_original.x) / 2 + bullet.position_original.x, 
                         (bullet.position_destination.y - bullet.position_original.y) / 2 + bullet.position_original.y, 
                         )
 
-                    bullet.position.x = center.x + (bullet.position_original.x - bullet.position_destination.x) * math.cos(bullet.rotation * math.pi / 180) * 0.8
-                    bullet.position.y = center.y + (bullet.position_original.y - bullet.position_destination.y) * math.sin(bullet.rotation * math.pi / 180) * 0.8
+                    #ellipse = (((bullet.position.x - center.x) * math.cos(bullet.rotation * math.pi / 180) + (bullet.position.y - center.y) * math.sin(bullet.rotation * math.pi / 180))**2)/(((bullet.position_destination.x - bullet.position_original.x)/2 + 1)**2 + ((bullet.position_destination.y - bullet.position_original.y)/2 + 1)**2) + (((bullet.position.x - center.x) * math.sin(bullet.rotation * math.pi / 180) - (bullet.position.y - center.y) * math.cos(bullet.rotation * math.pi / 180))**2)/(((bullet.position_destination.x - bullet.position_original.x)/4 + 1)**2 + ((bullet.position_destination.y - bullet.position_original.y)/4 + 1)**2)                    
+                    
+                    # Computing the ellipse's half-axis' -> Instead of a fixed value, I made it so the ellipse's size/area is relative to the throw distance.
+                    ax = ((bullet.position_destination.x - bullet.position_original.x) / 2 + 1)
+                    ay = ((bullet.position_destination.y - bullet.position_original.y) / 2 + 1)
+                    bx = ((bullet.position_destination.x - bullet.position_original.x) / 4 + 1) # A little trade secret: This isn't really an ellipse. I don't even have the focus points. The distance between those two points (wherever they are) and the points of the ellipse would be approximately constant when added together though, so I'm fine with this. 
+                    by = ((bullet.position_destination.y - bullet.position_original.y) / 4 + 1)
+
+                    distance = math.sqrt((bullet.position_destination.x - bullet.position_original.x)**2 + (bullet.position_destination.y - bullet.position_original.y)**2) + 1
+                    angle = math.acos((bullet.position_destination.x - bullet.position_original.x)/distance) * self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y)
+
+                    bullet.position.x =  2 * center.x + math.sqrt(ax**2 + ay**2) * math.cos((bullet.rotation + 180) *  math.pi / 180) + math.sqrt(ax**2 + ay**2) * math.cos(0) - bullet.position_destination.x
+                    bullet.position.y =  2 * center.y + math.sqrt(bx**2 + by**2) * math.sin((bullet.rotation + 180) *  math.pi / 180) + math.sqrt(bx**2 + by**2) * math.sin(0) - bullet.position_destination.y
+                    
+                    bullet.position.x -= bullet.position_original.x
+                    bullet.position.y -= bullet.position_original.y
+
+                    bullet.position.rotate_rad_ip(angle)
+
+                    bullet.position.x += bullet.position_original.x
+                    bullet.position.y += bullet.position_original.y
+                    
 
                     tempX = bullet.position.x
                     tempY = bullet.position.y
@@ -868,23 +891,23 @@ class Game():
                     bullet.position_destination.y -= (tempY - bullet.position.y)
                     bullet.position_original.x -= (tempX - bullet.position.x)
                     bullet.position_original.y -= (tempY - bullet.position.y)
-
-                    if pygame.sprite.collide_circle(bullet, self.player) or bullet.rotation > 40:
-                        rect = pygame.Rect(bullet.position.x, bullet.position.y, weapon.size*3, weapon.size*3)
-                        pygame.draw.arc(self.screen, weapon.colour, rect, math.radians(0 + bullet.animation_rotation), math.radians(120 + weapon.level * 25 + bullet.animation_rotation), 7 + weapon.level)
-                        
-                        if weapon.level >= 3:
-                            pygame.draw.arc(self.screen, "blue", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2 + weapon.level)
-
-                        if weapon.level == 5:
-                            pygame.draw.arc(self.screen, "indianred3", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2)
-
                     bullet.rotation += weapon.speed * 0.1 * (1 + abs(math.sin(bullet.rotation * math.pi / 180)))
-                    bullet.animation_rotation += weapon.speed * 0.3 * (1 + abs(math.sin(bullet.rotation * math.pi / 180)))
+                    bullet.animation_rotation += weapon.speed * 0.3 * (1 + abs(math.sin(30 * math.pi / 180)))
 
-                    if (pygame.sprite.collide_circle(bullet, self.player) and bullet.rotation >= 180 ) or bullet.rotation >= 410:
+                    rect = pygame.Rect(bullet.position.x, bullet.position.y, weapon.size*3, weapon.size*3)
+                    pygame.draw.arc(self.screen, weapon.colour, rect, math.radians(0 + bullet.animation_rotation), math.radians(120 + weapon.level * 25 + bullet.animation_rotation), 7 + weapon.level)
+                    
+                    if weapon.level >= 3:
+                        pygame.draw.arc(self.screen, "blue", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2 + weapon.level)
+
+                    if weapon.level == 5:
+                        pygame.draw.arc(self.screen, "indianred3", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2)
+
+
+                    if (pygame.sprite.collide_circle(bullet, self.player) and bullet.rotation >= 180) or bullet.rotation >= 720:
                         bullet.remove(weapon.bullets)
                         bullet.kill()
+
             if "pet" in weapon.pattern:
                 pygame.draw.circle(self.screen, weapon.colour, (weapon.position.x, weapon.position.y), weapon.size)
                 if weapon.level >= 3: 

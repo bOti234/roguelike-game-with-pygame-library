@@ -127,6 +127,12 @@ Github repository for the second assignment of Programming II.
 
 -Added todo list in readme.
 
+### Update v1.1.3
+
+-Fixed the movement of boomerang. 
+
+-Added return feature to the movement of boomerang.
+
 
 ## TODO list:
 
@@ -146,10 +152,12 @@ Github repository for the second assignment of Programming II.
 
 -Fixing balance of rifle and orb.
 
--Fixing movement and hitbox of boomerang.
+-Fixing hitbox of boomerang.
 
 -Implementing all passives.
 
 -Creating all talent images. Implementing all talents.
 
--There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)
+-Cleaniing up the code by removing any unnececary lines and making it more efficient.
+
+There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)
