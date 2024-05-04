@@ -134,13 +134,27 @@ Github repository for the second assignment of Programming II.
 -Added return feature to the movement of boomerang.
 
 
+### Update v1.1.4
+
+-Renamed Remote Explosion to Cluster Bombs. Finished mechanics of cluster bomb. Adjusted balance of cluster bomb. Finished design of cluster bomb.
+
+-Finished mechanics of damaging field. Adjusted balance of damaging field. Finished design of damaging field.
+
+-Added status effect attributes to weapons and enemies. Enemies are now slowed when they enter damaging field. Enemies are now knocked back when damaged by several weapons.
+
+-When the player collects a large amount of experience orbs, they will now select passives almost immediately after the previous one, this way the gameplay won't be that annoying. It still needs to be fine tuned. 
+
+-Redid the calculations of all kinds of damage, so now I can change it with buffs and debuffs from different sources.
+
+-Implemented health regeneration, protective barrier and greater strength. Created barrier bar over the health bar.
+
+-When the player is damaged, the damage is first removed from the barrier.
+
 ## TODO list:
 
 -Creating a buffs (and debuffs) list/dict/class for the player where I manage all the stat buffs for weapons, bullets, kits, player.
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
-
--Adding images for the rest of the talents.
 
 -Making the design of the selectors better (e.g., fixing image sizes, positions, making letters larger, creating borders for the boxes, other colours)
 
@@ -152,12 +166,24 @@ Github repository for the second assignment of Programming II.
 
 -Fixing balance of rifle and orb.
 
--Fixing hitbox of boomerang.
+-Fixing the hitbox of orb.
+
+-Fixing the balance with crowd control.
+
+-Fixing descriptions of passives and weapons.
 
 -Implementing all passives.
 
 -Creating all talent images. Implementing all talents.
 
--Cleaniing up the code by removing any unnececary lines and making it more efficient.
+-Fixing the issue when a key from awsd is still pressed down when the selector menu opens, after the user chooses an option, the player character teleports based on the pressed button.
+
+-Expanding the map, adding in background elements (e.g. stones, trees, a pond where the player can't go, etc.)
+
+-Cleaning up the code by removing any unnececary lines and making it more efficient.
+
+-New weapon: A cannon that shoots an orb that spreads in all direction after reaching a set distance/enemy.
+
+-New weapon idea: Yondu's arrow.
 
 There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)

@@ -48,7 +48,7 @@ class Game():
         self.player_weapons: List[Weapon] = []
         if len(self.weaponlist) > 0:
            self.player_weapons.append(self.weaponlist[0])
-           self.player_weapons[0].upgradeItem()
+           self.player_weapons[0].upgradeItem(5)
 
         self.bulletGroup: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
         self.WeaponKitGroup: pygame.sprite.Group[WeaponKit] = pygame.sprite.Group()
@@ -74,13 +74,13 @@ class Game():
 
         berserk = Passive(
             name = "Berserk",
-            value = 1.2,
+            value = 0.2,
             cooldown = 0
         )
 
         crit = Passive(
         name = "Crit Chance",
-        value = 1.1,
+        value = 0.1,
         cooldown = 0
         )
 
@@ -104,13 +104,13 @@ class Game():
 
         aura = Passive(
             name = "Slowing Aura",
-            value = 1.2,
+            value = 0.2,
             cooldown = 0
         )
 
         strength = Passive(
             name = "Greater Strength",
-            value = 1.05,
+            value = 0.05,
             cooldown = 0
         )
 
@@ -122,7 +122,7 @@ class Game():
 
         wisdom = Passive(
             name = "Enhanced Wisdom",
-            value = 1.08,
+            value = 0.08,
             cooldown = 0
         )
 
@@ -157,7 +157,10 @@ class Game():
             speed = 25, 
             bulletlifetime = 2.1, 
             damage = 15, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.0,
+            knockback = 0.25,
+            weaken = 0.0
         )
 
         orb = Weapon(
@@ -170,7 +173,10 @@ class Game():
             speed = 40, 
             bulletlifetime = "inf", 
             damage = 15,
-            position = pygame.Vector2(0, 0)
+            position = pygame.Vector2(0, 0),
+            slow = 0.0,
+            knockback = 0.3,
+            weaken = 0.0
         )
 
         boomerang = Weapon(
@@ -179,11 +185,14 @@ class Game():
             dmgtype = "normal", 
             pattern = "single angled", 
             colour = "gray", 
-            size = 20, 
+            size = 25, 
             speed = 15, 
             bulletlifetime = "inf", 
             damage = 15, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.0,
+            knockback = 0.4,
+            weaken = 0.0
         )
 
         flamethrower = Weapon(
@@ -196,20 +205,26 @@ class Game():
             speed = 10, 
             bulletlifetime = 0.3, 
             damage = 2, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.1,
+            knockback = 0.0,
+            weaken = 0.0
         )
 
         damage_field = Weapon( #TODO
             name = "Damaging Field", 
             cooldown_max = 3, 
             dmgtype = "fire", 
-            pattern = "single aoe", 
-            colour = "red", 
-            size = 15, 
-            speed = 40, 
+            pattern = "thrown dot", 
+            colour = "red",
+            size = 150,
+            speed = 15, 
             bulletlifetime = 4, 
-            damage = 1, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            damage = 1.25, 
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.3,
+            knockback = 0.0,
+            weaken = 0.0
         )
 
         drone = Weapon(
@@ -222,20 +237,26 @@ class Game():
             speed = 40, 
             bulletlifetime = 0.01, 
             damage = 1, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.0,
+            knockback = 0.0,
+            weaken = 0.0
         )
         
-        explosion = Weapon( #TODO
-            name = "Remote Explosion", 
+        cluster = Weapon(
+            name = "Cluster Bombs", 
             cooldown_max = 2.5, 
             dmgtype = "energy", 
-            pattern = "single remote", 
+            pattern = "thrown cluster", 
             colour = "yellow", 
-            size = 15, 
-            speed = 40, 
-            bulletlifetime = "inf", 
-            damage = 5, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            size = 50, 
+            speed = 20, 
+            bulletlifetime = 10, 
+            damage = 10, 
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.7,
+            knockback = 0.0,
+            weaken = 0.0
         )
         
         pistols = Weapon(
@@ -248,10 +269,13 @@ class Game():
             speed = 20, 
             bulletlifetime = 0.35, 
             damage = 6, 
-            position = pygame.Vector2(self.player.position.x, self.player.position.y)
+            position = pygame.Vector2(self.player.position.x, self.player.position.y),
+            slow = 0.0,
+            knockback = 0.0,
+            weaken = 0.0
         )
 
-        return [boomerang]#rifle, orb, boomerang, flamethrower, damage_field, drone, explosion, pistols
+        return [rifle, orb, boomerang, flamethrower, damage_field, drone, cluster, pistols]#rifle, orb, boomerang, flamethrower, damage_field, drone, cluster, pistols
 
     def openMenu(self, menu: Menu):
         self.onpause = True
@@ -269,7 +293,7 @@ class Game():
         if len(weaponlist) > 0:
             menu = Menu()
             menu.state = "weapon_selector"
-            response = menu.openItemSelectorMenu(self.screen, self.settings.screen_width, self.settings.screen_height, self.onpause, weaponlist)
+            response = menu.openItemSelectorMenu(self.screen, self.settings.screen_width, self.settings.screen_height, self.onpause, weaponlist, self.player)
             if isinstance(response[1], Weapon):
                 if response[1] not in self.player_weapons:
                     self.player_weapons.append(response[1])
@@ -284,20 +308,24 @@ class Game():
             return random.sample(upgradeableWeapons, 3)
         return upgradeableWeapons
     
-    def openLevelUpMenu(self):
-        self.onpause = True
-        passivelist = self.getRandomPasives()
-        if len(passivelist) > 0:
-            menu = Menu()
-            menu.state = "passive_selector"
-            response = menu.openItemSelectorMenu(self.screen, self.settings.screen_width, self.settings.screen_height, self.onpause, passivelist)
-            if isinstance(response[1], Passive):
-                if response[1] not in self.player_passives:
-                    self.player_passives.append(response[1])
-            if response[0] == "closed":
+    def openLevelUpMenu(self, n = 1):
+        for i in range(n):
+            self.onpause = True
+            passivelist = self.getRandomPasives()
+            if len(passivelist) > 0:
+                menu = Menu()
+                menu.state = "passive_selector"
+                response = menu.openItemSelectorMenu(self.screen, self.settings.screen_width, self.settings.screen_height, self.onpause, passivelist, self.player)
+                if isinstance(response[1], Passive):
+                    if response[1] not in self.player_passives:
+                        self.player_passives.append(response[1])
+                if response[0] == "closed" and i == n - 1:
+                    self.onpause = False
+                elif i != n - 1:
+                    window = pygame.Rect(self.settings.screen_width / 4 - 200, self.settings.screen_height / 4, self.settings.screen_width / 2 + 400, self.settings.screen_height / 2)
+                    pygame.draw.rect(self.screen, (52, 78, 91), window)
+            else:
                 self.onpause = False
-        else:
-            self.onpause = False
 
     def getRandomPasives(self):
         upgradeablePassives = [passive for passive in self.passivelist if passive.level < 5]
@@ -310,7 +338,9 @@ class Game():
 
     def gameRun(self, user: User):
         pygame.init()
-        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height))
+        self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
+        self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+        
         clock = pygame.time.Clock()
         running = True
         self.dt = 0
@@ -327,7 +357,9 @@ class Game():
                 self.drawBackground() # Draw background and border of the map
 
                 self.attackCycle(mouse_pos)    # Drawing the weapon attacks
+                self.passiveCycle()
 
+                self.screen.blit(self.traspscreen, (0,0))
                 self.drawPlayer()
 
                 self.checkHitboxes()
@@ -342,7 +374,7 @@ class Game():
                 self.updateExperiencePosition()
 
                 self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
-                self.writeOnScreen(str(self.time))  # Write some stuff on the self.screen
+                self.writeOnScreen(str(round(self.time)//60)+":"+str(round(self.time - 60 * (self.time // 60))), self.settings.screen_width/2 - 13, 10)  # Write some stuff on the self.screen
                 self.writeOnScreen(str(self.player.experience_current)+" / "+str(self.player.experience_max), 0, 200)  # Write some stuff on the self.screen
 
                 self.drawStatBoxes()
@@ -350,6 +382,7 @@ class Game():
                 self.checkKeysPressed() # Update background position based on player movement
 
                 pygame.display.flip() # flip() the display to put your work on self.screen
+                
 
                 self.dt = clock.tick(self.settings.fps) / 1000 # self.dt is delta time in seconds since last frame
                 self.time += self.dt
@@ -365,15 +398,24 @@ class Game():
         else:
             pygame.draw.circle(self.screen, "skyblue", (self.player.position.x, self.player.position.y), self.player.radius)
 
-        p = self.player.updateExperience()
-        if p:
-            self.openLevelUpMenu() #TODO
+        n = self.player.updateExperience()
+        self.openLevelUpMenu(n)
+            
     
     def drawStatBoxes(self):
         hp_rect_border = pygame.Rect(self.player.position.x - self.player.radius, self.player.position.y + 55, self.player.width , 10)
         hp_rect = pygame.Rect(self.player.position.x - self.player.radius + 4, self.player.position.y + 55 + 3, (self.player.width - 4) * self.player.health_current / self.player.health_max, 10 - 6)
         hp_rect_missing = pygame.Rect(self.player.position.x + self.player.radius, self.player.position.y + 55 + 3, -(self.player.width - 4) * (1 - (self.player.health_current / self.player.health_max)), 10 - 6)
+        
+        barlist = [passive for passive in self.player_passives if passive.name == "Protective Barrier"]
+        if len(barlist) > 0:
+            barrier = barlist[0]
+            barrier_rect = pygame.Rect(self.player.position.x - self.player.radius + 4, self.player.position.y + 55 + 3, (self.player.width - 4) * (barrier.value / self.player.health_max) * self.player.buffs["barrier"] / barrier.value, 10 - 6)
+        
+        
         pygame.draw.rect(self.screen, "green", hp_rect, 0, 20)
+        if len(barlist) > 0:
+            pygame.draw.rect(self.screen, "blue", barrier_rect, 0, 20)
         pygame.draw.rect(self.screen, "red", hp_rect_missing, 0, 20)
         pygame.draw.rect(self.screen, "black", hp_rect_border, 3, 20)
 
@@ -385,6 +427,7 @@ class Game():
     def drawBackground(self):
         # fill the self.screen with a color to wipe away anything from last frame
         self.screen.fill("#124a21")
+        self.traspscreen.fill((18, 74, 33, 0))
         # Fill the smaller background surface within the self.screen boundaries
         background_rect = pygame.Rect(
             self.background.x - self.settings.screen_width,
@@ -481,23 +524,54 @@ class Game():
                 for exp in self.experienceGroup:
                     exp.setMinDistance(10000)
         
-        for enemy in self.EnemyGroup:
-            for bullet in self.bulletGroup:
+        
+        for bullet in self.bulletGroup:
+            for enemy in self.EnemyGroup:
                 if pygame.sprite.collide_rect(bullet, enemy):
-                    if enemy not in bullet.enemiesHit:
+                    weapon = [weapon for weapon in self.weaponlist if weapon.name == bullet.weaponname][0]
+                    if bullet.weaponname == "Damaging Field":
+                        if enemy.hitCooldown <= 0:
+                            #self.writeOnScreen(str(enemy.status_effects[weapon.name]), bullet.position.x, bullet.position.y)
+                            enemy.status_effects[weapon.name].update({"active":True})
+                            enemy.status_effects[weapon.name].update({"duration":0.2})
+                            enemy.health -= bullet.damage
+                            enemy.hitCooldown = 0.1
+                    elif enemy not in bullet.enemiesHit:
+                        enemy.health -= (bullet.damage + self.player.buffs["damage flat"]) * (1 + weapon.status_effects["weaken"]) * (1 + self.player.buffs["damage percentage"])
                         bullet.enemiesHit.append(enemy)
-                        enemy.health -= bullet.damage
                         enemy.hitCooldown = 0.5
-                        if enemy.health <= 0:
-                            self.spawnExperienceOrb(enemy)
-                            enemy.kill()
-                            if bullet.weaponname == "Attack Drone":
-                                bullet.kill()
+                        enemy.status_effects[weapon.name].update({"active":True})
+                        enemy.status_effects[weapon.name].update({"duration":0.2})
+                        if bullet.weaponname == "Cluster Bombs" and "mine" not in bullet.objtype:
+                            b = weapon.getClusters(bullet)
+                            weapon.bullets.add(b)
+                            self.bulletGroup.add(b)
+                            bullet.kill()
+                        elif bullet.objtype == "bullet mine":
+                            bullet.kill()
+                            
+                    if enemy.health <= 0:
+                        # if enemy in self.EnemyGroup:
+                        self.spawnExperienceOrb(enemy)
+                        enemy.kill()
+                        if bullet.weaponname == "Attack Drone":
+                            bullet.kill()
 
+        for enemy in self.EnemyGroup:
             if pygame.sprite.collide_circle(self.player, enemy):
                 if self.player.hitCooldown <= 0:
                     self.player.hitCooldown = 1
-                    self.player.health_current -= enemy.damage
+                    nerf = 1
+                    for weaponname, attr in enemy.status_effects.items():
+                        weapon = [weapon for weapon in self.weaponlist if weapon.name == weaponname][0]
+                        if attr["active"]:
+                            nerf *= (1 - weapon.status_effects["weaken"])
+                    if self.player.buffs["barrier"] >= enemy.damage * nerf:
+                        self.player.buffs["barrier"] -= enemy.damage * nerf
+                    else:
+                        remainder = enemy.damage * nerf - self.player.buffs["barrier"]
+                        self.player.buffs["barrier"] = 0
+                        self.player.health_current -= remainder
                     if self.player.health_current <= 0:
                         self.openDeathMenu()
         
@@ -553,6 +627,7 @@ class Game():
                         random.randint(round(self.background.y - self.settings.screen_height), round(self.background.y - self.settings.screen_height + self.settings.game_size**2 * 2))
                         )
                     enemy = Enemy(randpos, (self.time // 30) + 1)
+                    enemy.setStatusDict(self.weaponlist)
                     self.EnemyGroup.add(enemy)
                     self.EnemyCooldown = 10 - (self.time // 60)          #TODO MAKE IT A SETTING/MODIFIER
                     if self.EnemyCooldown < 5:
@@ -614,9 +689,19 @@ class Game():
             sinus = abs((enemy.position_destination.y - enemy.position_original.y)/distance) * self.compare_subtraction(enemy.position_destination.y, enemy.position_original.y)
             cosinus = abs((enemy.position_destination.x - enemy.position_original.x)/distance) * self.compare_subtraction(enemy.position_destination.x, enemy.position_original.x)
 
+            slowness = 1
+            for weaponname, attr in enemy.status_effects.items():
+                if attr["active"]:
+                    weapon = [weapon for weapon in self.weaponlist if weapon.name == weaponname][0]
+                    slowness *= (1 - weapon.status_effects["slow"])
+                    if weapon.status_effects["knockback"] > 0.0:
+                        slowness = -weapon.status_effects["knockback"]
+                        break
 
-            enemy.position.x += cosinus * enemy.speed * 0.1
-            enemy.position.y += sinus * enemy.speed * 0.1
+            enemy.position.x += cosinus * enemy.speed * 0.1 * slowness
+            enemy.position.y += sinus * enemy.speed * 0.1 * slowness
+
+            enemy.updateStatusDict(self.dt)
 
             enemy.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
             if enemy.hitCooldown > 0:
@@ -624,22 +709,24 @@ class Game():
                 enemy.hitCooldown -= self.dt
             else:
                 enemy.colour = "red"
+
+            if slowness != 1:
+                enemy.colour = (125, 0, 64)
             pygame.draw.circle(self.screen, enemy.colour, enemy.position, enemy.radius)
             pygame.draw.circle(self.screen, "black", enemy.position, enemy.radius, 3)
             #self.writeOnScreen(self.screen, str(enemy.position.x)+" "+str(enemy.position.y), enemy.position.x, enemy.position.y)
     
     def updateExperiencePosition(self):
         for exp in self.experienceGroup:
-            exp.position_original.x = exp.position.x
-            exp.position_original.y = exp.position.y
             exp.position_destination.x = self.player.position.x
             exp.position_destination.y = self.player.position.y
         
-            distance = math.sqrt((exp.position_destination.x - exp.position_original.x)**2 + (exp.position_destination.y - exp.position_original.y)**2) + 1
+            distance = math.sqrt((exp.position_destination.x - exp.position.x)**2 + (exp.position_destination.y - exp.position.y)**2) + 1
 
             tempX = exp.position.x
             tempY = exp.position.y
             exp.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+            
 
             if distance < exp.min_distance:
                 if tempX != exp.position.x or tempY != exp.position.y:
@@ -670,7 +757,6 @@ class Game():
         for weapon in self.player_weapons:
             if weapon.name == "Flamethrower" and weapon.image_projectile == None:
                 weapon.loadImages()
-                print(weapon.image_base)
             if "pet" in weapon.pattern:
                 if weapon.position_destination.x == 0 and weapon.position_destination.y == 0:
                     weapon.position_destination.x = self.player.position.x + 100
@@ -689,7 +775,7 @@ class Game():
             
             
             if weapon.cooldown_current <= 0:
-                if "circle" in weapon.pattern:
+                if weapon.name == "Energy Orb":
                     if len(weapon.bullets) < (weapon.level + 1):
                         weapon.bullets.empty()
                         weapon.rotation = -360 / (weapon.level + 1)
@@ -707,8 +793,12 @@ class Game():
                     bullet_pos = pygame.Vector2(weapon.position.x, weapon.position.y)
                     bullet_pos_original = pygame.Vector2(weapon.position_original.x, weapon.position_original.y)
 
-                    if "pet" in weapon.pattern:
-                        closestEnemies: List[Union[Enemy, None]] = self.getClosestEnemy(weapon, weapon.level)
+                    if weapon.name == "Attack Drone" or weapon.name == "Damaging Field":
+                        if weapon.name == "Damaging Field":
+                            n = (weapon.level + 1) // 2
+                        elif weapon.name == "Attack Drone":
+                            n = weapon.level
+                        closestEnemies: List[Union[Enemy, None]] = self.getClosestEnemy(weapon, n)
                         b = []
                         if closestEnemies:
                             for enemy in closestEnemies:
@@ -729,6 +819,105 @@ class Game():
                 weapon.updateCooldown(self.dt)
             
             for bullet in weapon.bullets:
+                if "thrown" in weapon.pattern:
+                    if bullet.position_destination.x == 0 and bullet.position_destination.y == 0:
+                        bullet.position_destination.x = mouse_pos.x
+                        bullet.position_destination.y = mouse_pos.y
+
+                    distance = math.sqrt((bullet.position_destination.x - bullet.position_original.x)**2 + (bullet.position_destination.y - bullet.position_original.y)**2) + 1
+                                        
+                    sinus = abs((bullet.position_destination.y - bullet.position_original.y)/distance) * self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y)
+                    cosinus = abs((bullet.position_destination.x - bullet.position_original.x)/distance) * self.compare_subtraction(bullet.position_destination.x, bullet.position_original.x)
+                    if "mine" in bullet.objtype:
+                        if math.sqrt((bullet.position.x - bullet.position_original.x)**2 + (bullet.position.y - bullet.position_original.y)**2) + 1 >= distance - 15:
+                            bullet.position.x = bullet.position_destination.x
+                            bullet.position.y = bullet.position_destination.y
+                            bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+                            bullet.position_destination.x = bullet.position.x
+                            bullet.position_destination.y = bullet.position.y
+                        else:
+                            tempX = bullet.position.x
+                            tempY = bullet.position.y
+                            bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+                            bullet.position_destination.x += bullet.position.x - tempX
+                            bullet.position_destination.y += bullet.position.y - tempY
+                            bullet.position.x += cosinus * weapon.speed * 0.35
+                            bullet.position.y += sinus * weapon.speed * 0.35
+                        
+                    
+                    elif math.sqrt((bullet.position.x - bullet.position_original.x)**2 + (bullet.position.y - bullet.position_original.y)**2) + 1 >= distance - 10 or bullet.weaponname == "Damaging Field":
+                        bullet.position.x = bullet.position_destination.x
+                        bullet.position.y = bullet.position_destination.y
+                        # bullet.position_original.x = bullet.position_destination.x
+                        # bullet.position_original.y = bullet.position_destination.y
+
+                        #tempX = bullet.position.x
+                        #tempY = bullet.position.y
+                        bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+
+                        bullet.position_destination.x = bullet.position.x# - tempX
+                        bullet.position_destination.y = bullet.position.y# - tempY
+                    else:
+                        # Throw angle/graph: 
+                        # A parabola that goes through position_original (the player) and position_destination (the mouse). It's concave when the mouse is higher up than the player, it's convex when the mouse is lower.
+
+                        # Equation:
+                        # f(x) = -(bullet.position_destination.y - bullet.position_original.y)/(bullet.position_destination.x - bullet.position_original.x)**2 * (x - bullet.position_destination.x)**2 + bullet.position_destination.y
+
+                        bullet.position.x += cosinus * weapon.speed
+
+                        if abs(bullet.position_destination.x - bullet.position_original.x) > 100:
+                            bullet.position.y = -(bullet.position_destination.y - bullet.position_original.y)/(1 + (bullet.position_destination.x - bullet.position_original.x)**2) * (bullet.position.x - bullet.position_destination.x)**2 + bullet.position_destination.y
+                        else:
+                            bullet.position.y += sinus * weapon.speed
+
+
+                        tempX = bullet.position.x
+                        tempY = bullet.position.y
+                        bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+
+                        bullet.position_destination.x += bullet.position.x - tempX
+                        bullet.position_destination.y += bullet.position.y - tempY
+                        # bullet.position_original.x += bullet.position.x - tempX
+                        # bullet.position_original.y += bullet.position.y - tempY
+
+                    if "mine" in bullet.objtype:
+                        bullet.rect = pygame.Rect(bullet.position.x, bullet.position.y, bullet.width, bullet.height)
+                        center = pygame.Vector2(bullet.position.x + bullet.width/2, bullet.position.y + bullet.height/2)
+                        pygame.draw.circle(self.screen, "black", center, bullet.width/2)
+                        pygame.draw.circle(self.screen, "red", center, 1)
+                    elif "cluster" in weapon.pattern:
+                        bullet.rect = pygame.Rect(bullet.position.x, bullet.position.y, bullet.width, bullet.height)
+                        pygame.draw.rect(self.screen, weapon.colour, bullet.rect)
+                        pygame.draw.rect(self.screen, "black", bullet.rect, 3)
+                    
+                    if weapon.name == "Damaging Field":
+                        transparency = abs(10 - bullet.lifeTime * self.compare_subtraction(bullet.lifeTime, 0) / weapon.bulletLifeTime * 10)
+                        if 255/100 * (25 + 4 * transparency) > 255:
+                            transparency = 18.75
+                        getDecentSize = transparency * 200
+                        if getDecentSize >= 6 * weapon.size / 8:
+                            getDecentSize = 6 * weapon.size / 8
+                        bullet.width = getDecentSize + 2 * weapon.size / 8 * transparency / 10
+                        bullet.height = getDecentSize + 2 * weapon.size / 8 * transparency / 10
+                        bullet.rect = pygame.Rect(bullet.position.x - bullet.width/2, bullet.position.y - bullet.height/2, bullet.width, bullet.height)
+                        pygame.draw.circle(self.traspscreen, (217, 78, 63, 255/100 * (25 + 4 * transparency)), (bullet.position.x, bullet.position.y), bullet.width/2 - 3.5)
+                        pygame.draw.circle(self.screen, (0,0,0, 255), (bullet.position.x, bullet.position.y),bullet.width/2, 4)
+                        
+                
+                    if isinstance(bullet.lifeTime, float) or isinstance(bullet.lifeTime, int):
+                        if bullet.lifeTime <= 0:
+                            if bullet.weaponname == "Cluster Bombs" and "mine" not in bullet.objtype:
+                                b = weapon.getClusters(bullet)
+                                weapon.bullets.add(b)
+                                self.bulletGroup.add(b)
+                            bullet.remove(weapon.bullets)
+                            bullet.kill()
+                        else:
+                            if bullet.weaponname == "Cluster Bombs" and "mine" not in bullet.objtype:
+                                self.writeOnScreen(str(round(bullet.lifeTime)),bullet.position.x + bullet.width * 2 / 7, bullet.position.y + bullet.height * 2 / 7)
+                            bullet.lifeTime -= self.dt
+                    #self.writeOnScreen(str(distance), bullet.position.x, bullet.position.y)
                 if "pet" in weapon.pattern:
                     bullet.position.x = bullet.position_destination.x
                     bullet.position.y = bullet.position_destination.y
@@ -861,13 +1050,26 @@ class Game():
                         (bullet.position_destination.y - bullet.position_original.y) / 2 + bullet.position_original.y, 
                         )
 
-                    #ellipse = (((bullet.position.x - center.x) * math.cos(bullet.rotation * math.pi / 180) + (bullet.position.y - center.y) * math.sin(bullet.rotation * math.pi / 180))**2)/(((bullet.position_destination.x - bullet.position_original.x)/2 + 1)**2 + ((bullet.position_destination.y - bullet.position_original.y)/2 + 1)**2) + (((bullet.position.x - center.x) * math.sin(bullet.rotation * math.pi / 180) - (bullet.position.y - center.y) * math.cos(bullet.rotation * math.pi / 180))**2)/(((bullet.position_destination.x - bullet.position_original.x)/4 + 1)**2 + ((bullet.position_destination.y - bullet.position_original.y)/4 + 1)**2)                    
-                    
+                    #ellipse = (((bullet.position.x - center.x) * math.cos(angle) + (bullet.position.y - center.y) * math.sin(angle))**2)/(((bullet.position_destination.x - bullet.position_original.x)/2 + 1)**2 + ((bullet.position_destination.y - bullet.position_original.y)/2 + 1)**2) + (((bullet.position.x - center.x) * math.sin(angle) - (bullet.position.y - center.y) * math.cos(angle))**2)/(((bullet.position_destination.x - bullet.position_original.x)/4 + 1)**2 + ((bullet.position_destination.y - bullet.position_original.y)/4 + 1)**2)                    
+                    # Based on the equations:
+                    # x = a * cos(ω) }
+                    # y = b * sin(ω) } where 0 <= ω <= 2π
+                    # AND:
+                    # ((x-u)^2)/(a^2) + ((x-v)^2)/(b^2) = 1, where u and v is the shift of the center point on the x and y axis respectively
+                    # I just rotate the whole thing by the angle of the throw
+
                     # Computing the ellipse's half-axis' -> Instead of a fixed value, I made it so the ellipse's size/area is relative to the throw distance.
-                    ax = ((bullet.position_destination.x - bullet.position_original.x) / 2 + 1)
-                    ay = ((bullet.position_destination.y - bullet.position_original.y) / 2 + 1)
-                    bx = ((bullet.position_destination.x - bullet.position_original.x) / 4 + 1) # A little trade secret: This isn't really an ellipse. I don't even have the focus points. The distance between those two points (wherever they are) and the points of the ellipse would be approximately constant when added together though, so I'm fine with this. 
-                    by = ((bullet.position_destination.y - bullet.position_original.y) / 4 + 1)
+                    ax = ((bullet.position_destination.x - bullet.position_original.x) / 2)
+                    ay = ((bullet.position_destination.y - bullet.position_original.y) / 2)
+
+                    focus_point1 = pygame.Vector2(bullet.position_original.x + ax / 5, bullet.position_original.y + ay / 5)
+                    focus_point2 = pygame.Vector2(bullet.position_destination.x - ax / 5, bullet.position_destination.y - ay / 5)
+
+                    cx = (focus_point2.x - focus_point1.x) / 2
+                    cy = (focus_point2.y - focus_point1.y) / 2
+
+                    bx = (math.sqrt(ax**2 - cx**2) / 1.25) # A little trade secret: This isn't really an ellipse. I should't divide it by 1.25. A boomerang flies on an elongated ellipse, so I actually need this and not a proper one (sadly).
+                    by = (math.sqrt(ay**2 - cy**2) / 1.25) #  https://decoboomerangs.com/en/article/how-a-boomerang-flies#:~:text=Long-range%20boomerangs%20have%20a,to%20140%20meters%20or%20more.
 
                     distance = math.sqrt((bullet.position_destination.x - bullet.position_original.x)**2 + (bullet.position_destination.y - bullet.position_original.y)**2) + 1
                     angle = math.acos((bullet.position_destination.x - bullet.position_original.x)/distance) * self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y)
@@ -894,14 +1096,14 @@ class Game():
                     bullet.rotation += weapon.speed * 0.1 * (1 + abs(math.sin(bullet.rotation * math.pi / 180)))
                     bullet.animation_rotation += weapon.speed * 0.3 * (1 + abs(math.sin(30 * math.pi / 180)))
 
-                    rect = pygame.Rect(bullet.position.x, bullet.position.y, weapon.size*3, weapon.size*3)
-                    pygame.draw.arc(self.screen, weapon.colour, rect, math.radians(0 + bullet.animation_rotation), math.radians(120 + weapon.level * 25 + bullet.animation_rotation), 7 + weapon.level)
+                    bullet.rect = pygame.Rect(bullet.position.x, bullet.position.y, weapon.size*3, weapon.size*3)
+                    pygame.draw.arc(self.screen, weapon.colour, bullet.rect, math.radians(0 + bullet.animation_rotation), math.radians(120 + weapon.level * 25 + bullet.animation_rotation), 7 + weapon.level)
                     
                     if weapon.level >= 3:
-                        pygame.draw.arc(self.screen, "blue", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2 + weapon.level)
+                        pygame.draw.arc(self.screen, "blue", bullet.rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2 + weapon.level)
 
                     if weapon.level == 5:
-                        pygame.draw.arc(self.screen, "indianred3", rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2)
+                        pygame.draw.arc(self.screen, "indianred3", bullet.rect, math.radians(0 + bullet.animation_rotation), math.radians(140 + weapon.level * 20 + bullet.animation_rotation), 2)
 
 
                     if (pygame.sprite.collide_circle(bullet, self.player) and bullet.rotation >= 180) or bullet.rotation >= 720:
@@ -911,7 +1113,7 @@ class Game():
             if "pet" in weapon.pattern:
                 pygame.draw.circle(self.screen, weapon.colour, (weapon.position.x, weapon.position.y), weapon.size)
                 if weapon.level >= 3: 
-                    pygame.draw.circle(self.screen, "black", (weapon.position.x, weapon.position.y), weapon.size, 3)
+                    pygame.draw.circle(self.screen, "black", (weapon.position.x, weapon.position.y), weapon.size, 2)
                 
                 modifierCos = weapon.size * math.cos((weapon.rotation + 30) * math.pi / 180)
                 modifierSin = weapon.size * math.sin((weapon.rotation + 30) * math.pi / 180)
@@ -927,6 +1129,21 @@ class Game():
                     pygame.draw.circle(self.screen, "black", (weapon.position.x + modifierSin, weapon.position.y + modifierCos), weapon.size/2, 3)
 
                 weapon.rotation += weapon.speed * 0.01
+    
+    def passiveCycle(self):
+        for passive in self.player_passives:
+            if passive.cooldown_current <= 0:
+                if passive.name == "Health Regeneration":
+                    self.player.health_current += self.player.buffs["health regen"]
+                    if self.player.health_current > self.player.health_max:
+                        self.player.health_current = self.player.health_max
+                    passive.cooldown_current = passive.cooldown_max
+                
+                if passive.name == "Protective Barrier":
+                    self.player.buffs["barrier"] = passive.value
+                    passive.cooldown_current = passive.cooldown_max
+            else:
+                passive.updateCooldown(self.dt)
     
     def writeOnScreen(self, txt, posX = 0, posY = 0):
         font = pygame.font.Font(None, 30)
@@ -946,6 +1163,7 @@ class Game():
 
 
 p1 = User("admin","12345")
+
 game1 = Game()
 game1.gameSetup(
     difficulty = "normal",

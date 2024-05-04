@@ -1,6 +1,7 @@
 from typing import List, Dict, Union
 import pygame
 import os
+import math
 
 class GameObject(pygame.sprite.Sprite):
 	def __init__(self, objtype: str, position, width: int, height: int):
@@ -9,7 +10,7 @@ class GameObject(pygame.sprite.Sprite):
 		self.position: pygame.Vector2 = position
 		self.width = width
 		self.height = height
-		if self.objtype in ["enemy", "player", "experience"]:
+		if self.objtype in ["enemy", "player", "experience"] or (self.objtype == "bullet" and self.weaponname == "Damaging Field"):
 			self.radius = self.width / 2
 			self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
 		else:
@@ -64,17 +65,33 @@ class PlayerCharacter(GameObject):
 		self.experience_max: int = 150
 		self.experience_current: int = 0
 		self.experience_queue: int = 0
+
+		self.buffs = {
+			"damage percentage":0.0,
+			"damage flat": 0.0,
+			"movement speed": 0.0,
+			"health regen": 0.0,
+			"barrier": 0.0
+		}
+	
+	def updateBuffs(self, buffname, value):
+		self.buffs.update({buffname: value})
 	
 	def updateExperience(self):
+		n = 0
+		while self.experience_queue > self.experience_max:
+			n += 1
+			self.experience_queue -= int(self.experience_max)
+			self.experience_max = int(round(self.experience_max * 1.2))
 		if self.experience_queue > 0:
 			self.experience_current += ((self.experience_queue // 100) + 1)
 			self.experience_queue -= ((self.experience_queue // 100) + 1)
 		if self.experience_current >= self.experience_max:
-			self.level += 1
+			n += 1
 			self.experience_current -= int(self.experience_max)
 			self.experience_max = int(round(self.experience_max * 1.2))
-			return self
-		return None
+		self.level += n
+		return n
 
 class Passive():
 	def __init__(self, name, value, cooldown):
@@ -94,9 +111,34 @@ class Passive():
 			self.image_base = pygame.image.load(filename_weapon + "/"+str(self.name)+"_1.jpg").convert_alpha()
 			self.image_maxed = pygame.image.load(filename_weapon + "/"+str(self.name)+"_2.jpg").convert_alpha()
 	
-	def upgradeItem(self):
+	def updateCooldown(self, dt):
+		if self.cooldown_current > 0:
+			self.cooldown_current -= dt
+		if self.cooldown_current < 0:
+			self.cooldown_current = 0
+	
+	def upgradeItem(self, player: PlayerCharacter):
 		if self.level < 5:
 			self.level += 1
+		
+		if self.name == "Health Regeneration":
+			if self.level > 1:
+				self.value += 1
+				self.cooldown_max -= 1
+			player.updateBuffs("health regen", self.value)
+		
+		if self.name == "Protective Barrier":
+			if self.level > 1:
+				self.value += 5
+				self.cooldown_max -= 1
+			player.updateBuffs("barrier", self.value)
+
+		if self.name == "Greater Strength":
+			if self.level > 1:
+				self.value += 0.05
+				player.updateBuffs("damage percentage", self.value)
+			if self.level == 5:
+				player.updateBuffs("damage flat", player.buffs["damage flat"]+1)
 
 	def getDescription(self):
 		dirname = os.path.dirname(__file__)
@@ -105,12 +147,32 @@ class Passive():
 			cont = {}
 			[cont.update(eval(line)) for line in f.readlines()]
 		return eval(cont[self.name])
+	
+class Bullet(GameObject):
+	def __init__(self, weaponnanme: str, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, crit: bool, objtype: str, width_and_height: int):
+		self.weaponname = weaponnanme
+		super().__init__(objtype, position, width_and_height, width_and_height)
+		#self.position = position
+		self.position_original = position_original
+		self.position_destination = position_destination
+		self.lifeTime: float = lifetime
+		self.damage: float = damage
+		self.crit: bool = crit
+
+		self.enemiesHit: List[Enemy] = []
+
+	def addRotation(self, rotation):
+		self.rotation = rotation
+		
+	def addAnimationRotation(self, rotation):
+		self.animation_rotation = rotation
 
 class Weapon(GameObject):
-	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], damage: float, position: pygame.Vector2):
+	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], damage: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
 		objtype = "weapon"
 		self.pattern: str = pattern
-		if "circle" in self.pattern or "angled" in self.pattern or "pet" in self.pattern:
+		self.name: str = name
+		if self.name == "Energy Orb" or self.name == "Boomerang" or self.name == "Attack Drone":
 			self.rotation = 0
 			self.distance = 150
 			position.x -= size
@@ -122,12 +184,22 @@ class Weapon(GameObject):
 			width_and_height = size
 
 		self.range = None
-		if "pet" in self.pattern:
+		if self.name == "Attack Drone":
 			self.range = 300
+
+		if self.name == "Damaging Field":
+			self.range = 800
+		
+		if self.name == "Cluster Bombs":
+			self.bomb_damage = 10
+			self.bomb_range = 50
+			self.bomb_count = 10
+			self.bullet_size = 10
+		
+		self.status_effects = {"slow":slow, "knockback":knockback, "weaken":weaken}
 
 		super().__init__(objtype, position, width_and_height, width_and_height)
 
-		self.name: str = name
 		self.cooldown_max: float = cooldown_max
 		self.cooldown_current: float = cooldown_max
 		self.dmgtype: str = dmgtype
@@ -178,84 +250,94 @@ class Weapon(GameObject):
 		if self.cooldown_current <= 0:
 			self.cooldown_current = self.cooldown_max
 	
-	def upgradeItem(self):
-		if self.level < 5:
-			self.level += 1
-		if self.level > 1:
-			if "straight" in self.pattern:
-				self.damage += 10
-				self.speed += 4
-				self.size += 2
-			
-			if self.name == "High-tech Rifle":
-				self.cooldown_max -= 0.1 * (5 - self.level)
-				if self.level == 3:
-					self.pattern = "multiple straight"
-				if self.level == 5:
-					self.damage += 15
-					self.speed -= 3
-			
-			if self.name == "Flamethrower":
-				self.cooldown_max -= 0.075
-				self.speed -= (2 - self.level)
-				self.size += 1
-				self.damage -= 9
-				self.bulletLifeTime -= 0.004 * self.level
-				if self.level == 5:
-					self.bulletLifeTime -= 0.02
-			
-			if self.name == "Pistols":
-				self.speed -= 3
-				self.cooldown_max -= 0.02
-				self.bulletLifeTime += 0.05
-				self.damage -= 4 - self.level
-				if self.level >= 4:
-					self.damage += 1
-				
-			
-			if "circle" in self.pattern:
-				self.speed *= 1.1
-				self.size += 5
-				self.distance += 50
-			
-			if "angled" in self.pattern:
-				self.cooldown_max -= 0.35
-				self.damage += 10
-				self.size += 2
-				self.speed += 2
-				if self.level >= 4:
-					self.size += 1
-					self.speed += 1
-			
-			if "pet" in self.pattern:
+	def upgradeItem(self, amount = 1, player = None):
+		for i in range(amount):
+			if self.level < 5:
+				self.level += 1
+
 				if self.level > 1:
-					self.damage += 0.2 * self.level
-					self.range += 50
-					self.speed += 10
-					self.size += 2.5
+					if "straight" in self.pattern:
+						self.damage += 10
+						self.speed += 4
+						self.size += 2
 					
-				if self.level == 5:
-					self.range += 50
+					if self.name == "High-tech Rifle":
+						self.cooldown_max -= 0.1 * (5 - self.level)
+						if self.level == 3:
+							self.pattern = "multiple straight"
+						if self.level == 5:
+							self.damage += 15
+							self.speed -= 3
+					
+					if self.name == "Flamethrower":
+						self.cooldown_max -= 0.075
+						self.speed -= (2 - self.level)
+						self.size += 1
+						self.damage -= 9
+						self.bulletLifeTime -= 0.004 * self.level
+						if self.level == 5:
+							self.bulletLifeTime -= 0.02
+
+					if self.name == "Damaging Field":
+						self.status_effects["slow"] += 0.1
+						self.size += 50
+						self.damage += 0.15
+						self.cooldown_max -= 0.1
+						self.bulletLifeTime += 0.3
+					
+					if self.name == "Pistols":
+						self.speed -= 3
+						self.cooldown_max -= 0.02
+						self.bulletLifeTime += 0.05
+						self.damage -= 4 - self.level
+						if self.level >= 4:
+							self.damage += 1
+					
+					if "cluster" in self.pattern:
+						self.cooldown_max -= 0.25
+						self.bulletLifeTime += 5
+						self.size += 3
+						self.damage += 7
+						self.bomb_damage += 5
+						self.bomb_count += 4
+						self.bomb_range += 22
+						self.bullet_size += 3
+					
+					if "circle" in self.pattern:
+						self.speed *= 1.1
+						self.size += 5
+						self.distance += 50
+					
+					if "angled" in self.pattern:
+						self.cooldown_max -= 0.425
+						self.damage += 10
+						self.size += 3
+						self.speed += 2
+						if self.level >= 4:
+							self.size += 2
+							self.speed += 1
+						if self.level == 5:
+							self.damage += 5
+					
+					if "pet" in self.pattern:
+						if self.level > 1:
+							self.damage += 0.2 * self.level
+							self.range += 50
+							self.speed += 10
+							self.size += 2.5
+							
+						if self.level == 5:
+							self.range += 50
 	
-class Bullet(GameObject):
-	def __init__(self, weaponnanme: str, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, crit: bool, objtype: str, width_and_height: int):
-		super().__init__(objtype, position, width_and_height, width_and_height)
-		self.weaponname = weaponnanme
-		self.position = position
-		self.position_original = position_original
-		self.position_destination = position_destination
-		self.lifeTime: float = lifetime
-		self.damage: float = damage
-		self.crit: bool = crit
-
-		self.enemiesHit: List[Enemy] = []
-
-	def addRotation(self, rotation):
-		self.rotation = rotation
-		
-	def addAnimationRotation(self, rotation):
-		self.animation_rotation = rotation
-
+	def getClusters(self, bullet: Bullet):
+		b = []
+		r = self.bomb_count
+		for i in range(r):
+			angle = 360 / r
+			destination = pygame.Vector2(bullet.position.x + self.bomb_range * math.cos(i * angle * math.pi / 180), bullet.position.y + self.bomb_range * math.sin(i * angle * math.pi / 180))
+			position = pygame.Vector2(bullet.position.x, bullet.position.y)
+			b.append(Bullet("Cluster Bombs", position, position, destination, 8 + (self.level - 1), self.bomb_damage, False, "bullet mine", self.bullet_size))
+		return b
 
 class Enemy(GameObject):
 	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 20, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal"):
@@ -276,6 +358,22 @@ class Enemy(GameObject):
 		self.weakness = weakness
 		self.type = type
 		self.hitCooldown = 0
+
+
+	def setStatusDict(self, weaponlist: List[Weapon]):
+		self.status_effects = {}
+		for weapon in weaponlist:
+			self.status_effects.update({weapon.name:{"active":False, "duration":0.0}})
+		#TODO: player status effects
+  
+	def updateStatusDict(self, dt):
+		for attr in self.status_effects.values():
+			if attr["active"]:
+				if attr["duration"] <= 0:
+					attr["duration"] = 0.0
+					attr["active"] = False
+				else:
+					attr["duration"] -= dt
 
 class Experience(GameObject):
 	def __init__(self, position: pygame.Vector2, radius, colour, value):
@@ -380,7 +478,7 @@ class Menu(HUD):
 
 				pygame.display.update()
 
-	def openItemSelectorMenu(self, screen: pygame.Surface, screen_width: int, screen_height: int, paused: bool, itemlist: List[Union[Weapon, Passive]]):
+	def openItemSelectorMenu(self, screen: pygame.Surface, screen_width: int, screen_height: int, paused: bool, itemlist: List[Union[Weapon, Passive]], player: PlayerCharacter):
 		if pygame.get_init():
 			# Load button images for menu buttons selection
 			for item in itemlist:
@@ -439,17 +537,17 @@ class Menu(HUD):
 						# Draw item selection buttons
 						if len(itemlist) > 0:
 							if item_button1.draw(screen) or text_button1.drawText(screen):
-								itemlist[0].upgradeItem()
+								itemlist[0].upgradeItem(player = player)
 								paused = False
 								return ["closed", itemlist[0]]
 						if len(itemlist) > 1:
 							if item_button2.draw(screen) or text_button2.drawText(screen):
-								itemlist[1].upgradeItem()
+								itemlist[1].upgradeItem(player = player)
 								paused = False
 								return ["closed", itemlist[1]]
 						if len(itemlist) > 2:
 							if item_button3.draw(screen) or text_button3.drawText(screen):
-								itemlist[2].upgradeItem()
+								itemlist[2].upgradeItem(player = player)
 								paused = False
 								return ["closed", itemlist[2]]
 

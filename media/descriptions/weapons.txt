@@ -4,5 +4,5 @@
 {"Flamethrower": "f'A weapon that shoots flames. Damage: {self.damage}.'"}
 {"Damaging Field": "f'A field that damages enemies. Damage: {self.damage}.'"}
 {"Attack Drone": "f'A drone that attacks the closest enemy to it with a laser. Next upgrade: Number of targets: {self.level + 1} Damage: {self.damage + 0.15 * (self.level + 1)} Range: {self.range + 50}.'"}
-{"Remote Explosion": "f'An explosion that can be detonated remotely. Damage: {self.damage}.'"}
+{"Cluster Bombs": "f'An explosion that can be detonated remotely. Damage: {self.damage}.'"}
 {"Pistols": "f'A pair of pistols. Damage: {self.damage}.'"}
