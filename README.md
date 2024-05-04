@@ -133,7 +133,6 @@ Github repository for the second assignment of Programming II.
 
 -Added return feature to the movement of boomerang.
 
-
 ### Update v1.1.4
 
 -Renamed Remote Explosion to Cluster Bombs. Finished mechanics of cluster bomb. Adjusted balance of cluster bomb. Finished design of cluster bomb.
@@ -149,6 +148,18 @@ Github repository for the second assignment of Programming II.
 -Implemented health regeneration, protective barrier and greater strength. Created barrier bar over the health bar.
 
 -When the player is damaged, the damage is first removed from the barrier.
+
+### Update v1.1.5
+
+-Implemented crit chance, berserk, slowing aura, gunslinger, dodge and greater vitality.
+
+-Changed the z-indexes of some of the classes I paint over the screen. Transparent objects now appear under the player, the other bullets and the enemies.
+
+-Transparent objects can make the game lag, so they might have to be changed later.
+
+-Changed the list of player passives and weapons to dictionaries, so that I can access these passives and weapons without any iteration.
+
+-Added some text on the screen, they still need their design to be edited though. (player weapons, player passives and levels, player max health, item names when selecting)
 
 ## TODO list:
 
@@ -166,13 +177,15 @@ Github repository for the second assignment of Programming II.
 
 -Fixing balance of rifle and orb.
 
--Fixing the hitbox of orb.
+-Fixing the hitbox of orb and cluster bombs.
 
 -Fixing the balance with crowd control.
 
 -Fixing descriptions of passives and weapons.
 
 -Implementing all passives.
+
+-Reducing lag when a large amount of sprite is on the screen. (e.g., experience disappeears after awhile / multiple ones for one big orb, reduce bullet counts (especially with culster bombs), reduce enemy count)
 
 -Creating all talent images. Implementing all talents.
 

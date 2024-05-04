@@ -53,29 +53,48 @@ class GameObject(pygame.sprite.Sprite):
 		self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
 
 class PlayerCharacter(GameObject):
-	def __init__(self, radius, position: pygame.Vector2, speed):
+	def __init__(self, radius, position: pygame.Vector2, health, speed):
 		objtype = "player"
 		super().__init__(objtype, pygame.Vector2(position.x, position.y), radius*2, radius*2)
 
+		self.buffs: Dict[str, Union[int, float, Dict[str, Union[int, float]]]] = {
+			"damage percentage":{},
+			"damage flat": {},
+			"health percentage": {},
+			"health flat": {},
+			"speed percentage": {},
+			"speed flat": {},
+			"health regen": 0.0,
+			"barrier": 0.0,
+			"dodge count": 0,
+			"gunslinger": 0,
+		}
+
 		self.level = 1
-		self.health_max = 50 + (self.level - 1) * 10
+		self.health_max_base = health
+		self.speed_base = speed
+		self.setStats()
 		self.health_current = self.health_max
 		self.hitCooldown = 0
-		self.speed = speed + (self.level - 1) * 25
 		self.experience_max: int = 150
 		self.experience_current: int = 0
 		self.experience_queue: int = 0
-
-		self.buffs = {
-			"damage percentage":0.0,
-			"damage flat": 0.0,
-			"movement speed": 0.0,
-			"health regen": 0.0,
-			"barrier": 0.0
-		}
 	
-	def updateBuffs(self, buffname, value):
-		self.buffs.update({buffname: value})
+	def setStats(self):
+		flatbuff_health = sum([0]+[val for val in self.buffs["health flat"].values()])
+		percbuff_health = math.prod([1 + val for val in self.buffs["health percentage"].values()])
+		
+		flatbuff_speed = sum([0]+[val for val in self.buffs["speed flat"].values()])
+		percbuff_speed = math.prod([1 + val for val in self.buffs["speed percentage"].values()])
+
+		self.health_max = (self.health_max_base + (self.level - 1) * 10 + flatbuff_health) * percbuff_health
+		self.speed = (self.speed_base + (self.level - 1) * 25 + flatbuff_speed) * percbuff_speed
+
+	def updateBuffs(self, value, buffname, passive = None):
+		if passive:
+			self.buffs[buffname].update({passive: value})
+		else:
+			self.buffs.update({buffname: value})
 	
 	def updateExperience(self):
 		n = 0
@@ -91,15 +110,17 @@ class PlayerCharacter(GameObject):
 			self.experience_current -= int(self.experience_max)
 			self.experience_max = int(round(self.experience_max * 1.2))
 		self.level += n
+		self.setStats()
 		return n
 
 class Passive():
-	def __init__(self, name, value, cooldown):
+	def __init__(self, name, value, cooldown, count = 0):
 		self.name = name
 		self.level = 0
 		self.value = value
 		self.cooldown_max = cooldown
 		self.cooldown_current = 0
+		self.count = count
 		self.description = self.getDescription()
 
 		self.loadImages()
@@ -117,7 +138,12 @@ class Passive():
 		if self.cooldown_current < 0:
 			self.cooldown_current = 0
 	
-	def upgradeItem(self, player: PlayerCharacter):
+	def setHitbox(self, position: pygame.Vector2, radius):
+		self.position = position
+		self.radius = radius
+		self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.radius * 2, self.radius * 2)
+	
+	def upgradeItem(self, player: PlayerCharacter, amount = 1):	#TODO: IMPLEMENT AMOUNT
 		if self.level < 5:
 			self.level += 1
 		
@@ -125,20 +151,52 @@ class Passive():
 			if self.level > 1:
 				self.value += 1
 				self.cooldown_max -= 1
-			player.updateBuffs("health regen", self.value)
+			player.updateBuffs(self.value, "health regen")
 		
 		if self.name == "Protective Barrier":
 			if self.level > 1:
 				self.value += 5
 				self.cooldown_max -= 1
-			player.updateBuffs("barrier", self.value)
+			player.updateBuffs(self.value, "barrier")
 
 		if self.name == "Greater Strength":
 			if self.level > 1:
 				self.value += 0.05
-				player.updateBuffs("damage percentage", self.value)
+				player.updateBuffs(self.value, "damage percentage", self.name)
 			if self.level == 5:
-				player.updateBuffs("damage flat", player.buffs["damage flat"]+1)
+				player.updateBuffs(1, "damage flat", self.name)
+
+		if self.name == "Dodge":
+			if self.level > 1:
+				self.value += 1
+				self.cooldown_max -= 1
+
+		if self.name == "Crit rate":
+			if self.level > 1:
+				self.value += 0.05
+		
+		if self.name == "Gunslinger":
+			if self.level > 1:
+				self.value += 5
+				self.count += 1
+			player.updateBuffs(self.value, "gunslinger")
+
+		if self.name == "Berserk":
+			if self.level > 1:
+				self.value += 0.2
+			player.updateBuffs(self.value, "damage percentage", self.name)
+		
+		if self.name == "Greater Vitality":
+			if self.level > 1:
+				self.value += 10
+			player.updateBuffs(self.value, "health flat", self.name)
+			if self.level == 5:
+				player.updateBuffs(0.2, "health percentage", self.name)
+		
+		if  self.name == "Slowing Aura":
+			if self.level > 1:
+				self.value += 0.1
+			self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
 
 	def getDescription(self):
 		dirname = os.path.dirname(__file__)
@@ -250,7 +308,7 @@ class Weapon(GameObject):
 		if self.cooldown_current <= 0:
 			self.cooldown_current = self.cooldown_max
 	
-	def upgradeItem(self, amount = 1, player = None):
+	def upgradeItem(self, player = None, amount = 1):
 		for i in range(amount):
 			if self.level < 5:
 				self.level += 1
@@ -361,10 +419,9 @@ class Enemy(GameObject):
 
 
 	def setStatusDict(self, weaponlist: List[Weapon]):
-		self.status_effects = {}
+		self.status_effects: Dict[str, Dict[str, Union[bool, float, int]]] = {}
 		for weapon in weaponlist:
 			self.status_effects.update({weapon.name:{"active":False, "duration":0.0}})
-		#TODO: player status effects
   
 	def updateStatusDict(self, dt):
 		for attr in self.status_effects.values():
@@ -478,19 +535,19 @@ class Menu(HUD):
 
 				pygame.display.update()
 
-	def openItemSelectorMenu(self, screen: pygame.Surface, screen_width: int, screen_height: int, paused: bool, itemlist: List[Union[Weapon, Passive]], player: PlayerCharacter):
+	def openItemSelectorMenu(self, screen: pygame.Surface, screen_width: int, screen_height: int, paused: bool, itemlist: List[Union[Weapon, Passive]]):
 		if pygame.get_init():
 			# Load button images for menu buttons selection
 			for item in itemlist:
 				item.loadImages()
 
-			dirname = os.path.dirname(__file__)
-			filename = os.path.join(dirname, '../../media/images/buttons/')
-			get_img = pygame.image.load(filename + "/button_select.png").convert_alpha()
-
 			# Create button instances for weapon selection
 			images: List[pygame.Surface] = []
 			for i in range(len(itemlist)):
+				font = pygame.font.Font(None, 30)
+				text = font.render(itemlist[i].name, True, "black")
+				screen.blit(text, (0, 300 + 50 * i))
+				
 				if itemlist[i].level < 4:
 					images.append(itemlist[i].image_base)
 				else:
@@ -499,29 +556,29 @@ class Menu(HUD):
 			font = pygame.font.Font(None, 30)
 			if len(itemlist) == 1:
 				item_button1 = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 + 400, screen_height / 4 + 250, images[0], 0.1)
-				text_box1 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 250, screen_width / 4 - images[0].get_width() * 0.1 / 2 + 550, screen_height / 4 + 250 + images[0].get_height())
+				text_box1 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 250, screen_width / 4 - images[0].get_width() * 0.1 / 2 + 550, images[0].get_height() * 0.1)
 				text_button1 = Button(screen_width / 4 - 150, screen_height / 4 + 250, [font, itemlist[0].description, "white", text_box1], 1)
-			
+
 			elif len(itemlist) == 2:
 				item_button1 = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 + 400, screen_height / 4 + 150, images[0], 0.1)
-				text_box1 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 150, screen_width / 4 - images[0].get_width() * 0.1 / 2 + 550, screen_height / 4 + 150 + images[0].get_height())
+				text_box1 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 150, screen_width / 4 - images[0].get_width() * 0.1 / 2 + 550, images[0].get_height() * 0.1)
 				text_button1 = Button(screen_width / 4 - 150, screen_height / 4 + 150, [font, itemlist[0].description, "white", text_box1], 1)
 
 				item_button2 = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2 + 400, screen_height / 4 + 350, images[1], 0.1)
-				text_box2 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 350, screen_width / 4 - images[1].get_width() * 0.1 / 2 + 550, screen_height / 4 + 350 + images[1].get_height())
+				text_box2 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 350, screen_width / 4 - images[1].get_width() * 0.1 / 2 + 550, images[1].get_height() * 0.1)
 				text_button2 = Button(screen_width / 4 - 150, screen_height / 4 + 350, [font, itemlist[1].description, "white", text_box2], 1)
 			
 			elif len(itemlist) == 3:
 				item_button1 = Button(screen_width / 2 - images[0].get_width() * 0.1 / 2 + 400, screen_height / 4 + 50, images[0], 0.1)
-				text_box1 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 50, screen_width / 4 - images[0].get_width() * 0.1 / 2 + 550, screen_height / 4 + 50 + images[0].get_height())
+				text_box1 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 50, screen_width / 4 - images[0].get_width() * 0.1 / 2 + 550, images[0].get_height() * 0.1)
 				text_button1 = Button(screen_width / 4 - 150, screen_height / 4 + 50, [font, itemlist[0].description, "white", text_box1], 1)
 
 				item_button2 = Button(screen_width / 2 - images[1].get_width() * 0.1 / 2 + 400, screen_height / 4 + 250, images[1], 0.1)
-				text_box2 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 250, screen_width / 4 - images[1].get_width() * 0.1 / 2 + 550, screen_height / 4 + 250 + images[1].get_height())
+				text_box2 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 250, screen_width / 4 - images[1].get_width() * 0.1 / 2 + 550, images[1].get_height() * 0.1)
 				text_button2 = Button(screen_width / 4 - 150, screen_height / 4 + 250, [font, itemlist[1].description, "white", text_box2], 1)
 
 				item_button3 = Button(screen_width / 2 - images[2].get_width() * 0.1 / 2 + 400, screen_height / 4 + 450, images[2], 0.1)
-				text_box3 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 450, screen_width / 4 - images[2].get_width() * 0.1 / 2 + 550, screen_height / 4 + 450 + images[2].get_height())
+				text_box3 = pygame.Rect(screen_width / 4 - 150, screen_height / 4 + 450, screen_width / 4 - images[2].get_width() * 0.1 / 2 + 550, images[2].get_height() * 0.1)
 				text_button3 = Button(screen_width / 4 - 150, screen_height / 4 + 450, [font, itemlist[2].description, "white", text_box3], 1)
 
 			# Game loop
@@ -537,17 +594,14 @@ class Menu(HUD):
 						# Draw item selection buttons
 						if len(itemlist) > 0:
 							if item_button1.draw(screen) or text_button1.drawText(screen):
-								itemlist[0].upgradeItem(player = player)
 								paused = False
 								return ["closed", itemlist[0]]
 						if len(itemlist) > 1:
 							if item_button2.draw(screen) or text_button2.drawText(screen):
-								itemlist[1].upgradeItem(player = player)
 								paused = False
 								return ["closed", itemlist[1]]
 						if len(itemlist) > 2:
 							if item_button3.draw(screen) or text_button3.drawText(screen):
-								itemlist[2].upgradeItem(player = player)
 								paused = False
 								return ["closed", itemlist[2]]
 
