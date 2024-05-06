@@ -23,32 +23,32 @@ class GameObject(pygame.sprite.Sprite):
 		keys = pygame.key.get_pressed()
 		#TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
 
-		if keys[pygame.K_w] and keys[pygame.K_a] and "up" not in gate and "left" not in gate:
+		if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
 			self.position.y += speed * dt / 2**(1/2) * rate
 			self.position.x += speed * dt / 2**(1/2) * rate
 
-		elif keys[pygame.K_w] and keys[pygame.K_d] and "up" not in gate and "right" not in gate:
+		elif keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
 			self.position.y += speed * dt / 2**(1/2) * rate
 			self.position.x -= speed * dt / 2**(1/2) * rate
 
-		elif keys[pygame.K_w] and "up" not in gate:
+		elif keys[pygame.K_w]:# and "up" not in gate:
 			self.position.y += speed * dt * rate
 
-		elif keys[pygame.K_s] and keys[pygame.K_a] and "down" not in gate and "left" not in gate:
+		elif keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
 			self.position.y -= speed * dt / 2**(1/2) * rate
 			self.position.x += speed * dt / 2**(1/2) * rate
 
-		elif keys[pygame.K_s] and keys[pygame.K_d] and "down" not in gate and "right" not in gate:
+		elif keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
 			self.position.y -= speed * dt / 2**(1/2) * rate
 			self.position.x -= speed * dt / 2**(1/2) * rate
 
-		elif keys[pygame.K_s] and "down" not in gate:
+		elif keys[pygame.K_s]:# and "down" not in gate:
 			self.position.y -= speed * dt * rate
 
-		elif keys[pygame.K_a] and "left" not in gate:
+		elif keys[pygame.K_a]:# and "left" not in gate:
 			self.position.x += speed * dt * rate
 
-		elif keys[pygame.K_d] and "right" not in gate:
+		elif keys[pygame.K_d]:# and "right" not in gate:
 			self.position.x -= speed * dt * rate
 		self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
 

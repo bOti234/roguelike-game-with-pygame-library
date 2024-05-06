@@ -161,6 +161,14 @@ Github repository for the second assignment of Programming II.
 
 -Added some text on the screen, they still need their design to be edited though. (player weapons, player passives and levels, player max health, item names when selecting)
 
+### Update v1.2.0
+
+-Changed map range to infinite. Removed borders and movement restrictions.
+
+-Added proper background that has clean cut edges. This way it seems like the background is infinite, because they are repeated next to each other.
+
+-Made the background follow the player, so wherever they go there's a background behind them. I also don't have to load a thousand images every time.
+
 ## TODO list:
 
 -Creating a buffs (and debuffs) list/dict/class for the player where I manage all the stat buffs for weapons, bullets, kits, player.

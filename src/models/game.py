@@ -1,4 +1,5 @@
 import pygame
+import os
 import math
 import time
 import random
@@ -346,8 +347,10 @@ class Game():
 	def gameRun(self, user: User):
 		pygame.init()
 		self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
+		pygame.display.set_caption("Epic roguelike game")
 		self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
-		
+		self.getBackgroundImage()
+
 		clock = pygame.time.Clock()
 		running = True
 		self.dt = 0
@@ -434,38 +437,25 @@ class Game():
 		pygame.draw.rect(self.screen, "yellow", exp_rect, 0, 20)
 		pygame.draw.rect(self.screen, "black", exp_rect_border, 4, 20)
 	
+	def getBackgroundImage(self):
+		dirname = os.path.dirname(__file__)
+		filename_background = os.path.join(dirname, '../../media/images/background/')
+		image = pygame.image.load(filename_background + "/background_image.png").convert_alpha()
+		self.backgroundimage = pygame.transform.scale(image, (int(image.get_rect().width * 3), int(image.get_rect().height * 3)))
+
 	def drawBackground(self):
 		# fill the self.screen with a color to wipe away anything from last frame
 		self.screen.fill("#124a21")
 		self.traspscreen.fill((18, 74, 33, 0))
-		# Fill the smaller background surface within the self.screen boundaries
-		background_rect = pygame.Rect(
-			self.background.x - self.settings.screen_width,
-			self.background.y - self.settings.screen_height,
-			self.settings.game_size**2 * 2,
-			self.settings.game_size**2 * 2
-			)
-		# Fill the smaller background surface
-		pygame.draw.rect(self.screen, "#39ad58", background_rect)
-		# Draw background lines
-		for i in range(self.settings.game_size+1):
-			if i == 0 or i == self.settings.game_size:
-				w = 10
-			else:
-				w = 1
-			pygame.draw.line(
-				self.screen, 
-				"black", 
-				(self.background.x - self.settings.screen_width + i * self.settings.game_size * 2, self.background.y - self.settings.screen_height), 
-				(self.background.x - self.settings.screen_width + i * self.settings.game_size * 2, self.background.y - self.settings.screen_height + self.settings.game_size**2 * 2),
-				w)    # Vertical lines
-			
-			pygame.draw.line(
-				self.screen, 
-				"black", 
-				(self.background.x - self.settings.screen_width, self.background.y - self.settings.screen_height + i * self.settings.game_size * 2), 
-				(self.background.x - self.settings.screen_width + self.settings.game_size**2 * 2, self.background.y - self.settings.screen_height + i * self.settings.game_size * 2), 
-				w)    # Horizontal lines
+		image_rect = self.backgroundimage.get_rect()
+		steps_x = self.background.x // (image_rect.width)
+		steps_y = self.background.y // (image_rect.height)
+		
+		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (1 + steps_x), self.background.y - image_rect.height * (1 + steps_y)))
+		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (1 + steps_x), self.background.y - image_rect.height * (0 + steps_y)))
+		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (0 + steps_x), self.background.y - image_rect.height * (1 + steps_y)))
+		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (0 + steps_x), self.background.y - image_rect.height * (0 + steps_y)))
+
 
 	def notTouchingBorder(self):
 		li = []
@@ -488,32 +478,32 @@ class Game():
 	def checkKeysPressed(self):
 		keys = pygame.key.get_pressed()
 		gate = self.notTouchingBorder()   #TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
-		if keys[pygame.K_w] and keys[pygame.K_a] and "up" not in gate and "left" not in gate:
+		if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
 			self.background.y += self.settings.speed * self.dt / 2**(1/2)
 			self.background.x += self.settings.speed * self.dt / 2**(1/2)
 
-		elif keys[pygame.K_w] and keys[pygame.K_d] and "up" not in gate and "right" not in gate:
+		elif keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
 			self.background.y += self.settings.speed * self.dt / 2**(1/2)
 			self.background.x -= self.settings.speed * self.dt / 2**(1/2)
 
-		elif keys[pygame.K_w] and "up" not in gate:
+		elif keys[pygame.K_w]:# and "up" not in gate:
 			self.background.y += self.settings.speed * self.dt
 
-		elif keys[pygame.K_s] and keys[pygame.K_a] and "down" not in gate and "left" not in gate:
+		elif keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
 			self.background.y -= self.settings.speed * self.dt / 2**(1/2)
 			self.background.x += self.settings.speed * self.dt / 2**(1/2)
 
-		elif keys[pygame.K_s] and keys[pygame.K_d] and "down" not in gate and "right" not in gate:
+		elif keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
 			self.background.y -= self.settings.speed * self.dt / 2**(1/2)
 			self.background.x -= self.settings.speed * self.dt / 2**(1/2)
 
-		elif keys[pygame.K_s] and "down" not in gate:
+		elif keys[pygame.K_s]:# and "down" not in gate:
 			self.background.y -= self.settings.speed * self.dt
 
-		elif keys[pygame.K_a] and "left" not in gate:
+		elif keys[pygame.K_a]:# and "left" not in gate:
 			self.background.x += self.settings.speed * self.dt
 
-		elif keys[pygame.K_d] and "right" not in gate:
+		elif keys[pygame.K_d]:# and "right" not in gate:
 			self.background.x -= self.settings.speed * self.dt
 		
 		if keys[pygame.K_ESCAPE]:
