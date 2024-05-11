@@ -45,14 +45,18 @@ class Game():
 		self.passivelist = self.getPassives()
 		self.player_passives: Dict[str, Passive] = {}
 
+		# passive = [passive for passive in self.passivelist if passive.name == "Slowing Aura"][0]		# This is just for testing / later with game modificators
+		# self.player_passives.update({passive.name: passive})
+		# self.player_passives[passive.name].upgradeItem(self.player, 5)
+
 		self.weaponlist = self.getWeapons()
 		self.player_weapons: Dict[str, Weapon] = {}
 		#   I'm making this a dicitonary instead of a list. When iterating through it, it costs more as a list, but when I need a specific weapon, I can just get the value with the weapon's name as the key.
-		#   That is apparently not an iteration so it's more effecctive than the aforementioned method.
+		#   That is apparently not an iteration so it's more effective than the aforementioned method.
 
 		if len(self.weaponlist) > 0:
 			self.player_weapons.update({self.weaponlist[0].name: self.weaponlist[0]})
-			self.player_weapons[self.weaponlist[0].name].upgradeItem()
+			self.player_weapons[self.weaponlist[0].name].upgradeItem(amount = 1)
 
 		self.bulletGroup: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
 		self.ItemGroup: pygame.sprite.Group[Union[WeaponKit, HealthKit, Magnet]] = pygame.sprite.Group()
@@ -279,7 +283,39 @@ class Game():
 			weaken = 0.0
 		)
 
-		return [rifle, orb, boomerang, flamethrower, damage_field, drone, cluster, pistols]#rifle, orb, boomerang, flamethrower, damage_field, drone, cluster, pistols
+		scatter = Weapon(
+			name = "Scatter Rifle", 
+			cooldown_max = 2.5, 
+			dmgtype = "energy", 
+			pattern = "scatter straight", 
+			colour = "blue", 
+			size = 30, 
+			speed = 10, 
+			bulletlifetime = 3.25, 
+			damage = 20, 
+			position = pygame.Vector2(self.player.position.x, self.player.position.y),
+			slow = 0.0,
+			knockback = 0.2,
+			weaken = 0.1
+		)
+
+		arrow = Weapon(
+			name = "Homing Arrow", 
+			cooldown_max = 0.05, 
+			dmgtype = "normal", 
+			pattern = "single homing", 
+			colour = "black", 
+			size = 5, 
+			speed = 10, 
+			bulletlifetime = 0.05, 
+			damage = 6, 
+			position = pygame.Vector2(self.player.position.x, self.player.position.y),
+			slow = 0.1,
+			knockback = 0.0,
+			weaken = 0.3
+		)
+
+		return [rifle, orb, boomerang, flamethrower, damage_field, drone, cluster, pistols, scatter, arrow]#rifle, orb, boomerang, flamethrower, damage_field, drone, cluster, pistols, scatter, arrow
 
 	def openMenu(self, menu: Menu):
 		self.onpause = True
@@ -402,6 +438,7 @@ class Game():
 		pygame.quit()
 
 	def drawPlayer(self):
+		pygame.draw.rect(self.screen, "blue", self.player.rect)
 		if self.player.hitCooldown > 0:     # Draw player with diff colour based on if they were hit recently or not
 			self.player.hitCooldown -= self.dt
 			pygame.draw.circle(self.screen, "darkmagenta", (self.player.position.x, self.player.position.y), self.player.radius) 
@@ -599,7 +636,7 @@ class Game():
 		if len([weapon for weapon in self.weaponlist if weapon.level < 5]) > 0:
 			if self.WeaponKitCooldown <= 0:
 				chance = random.random()
-				if chance > 0.65:
+				if chance > 0.5:
 					randpos = pygame.Vector2(
 						random.randint(round(self.player.position.x + 250), round(self.player.position.x + 500)) * self.getSign(), 
 						random.randint(round(self.player.position.y + 250), round(self.player.position.y + 500)) * self.getSign()
@@ -617,7 +654,7 @@ class Game():
 	def spawnMagnet(self):
 		if self.MagnetCooldown <= 0:
 			chance = random.random()
-			if chance > 0.08:
+			if chance > 0.25:
 				randpos = pygame.Vector2(
 						random.randint(round(self.player.position.x + 250), round(self.player.position.x + 500)) * self.getSign(), 
 						random.randint(round(self.player.position.y + 250), round(self.player.position.y + 500)) * self.getSign()
@@ -628,7 +665,7 @@ class Game():
 				if self.MagnetCooldown < 60:
 					self.MagnetCooldown = 60
 			else:
-				self.MagnetCooldown = 5
+				self.MagnetCooldown = 10
 		else:
 			self.MagnetCooldown -= self.dt
 	
@@ -750,6 +787,8 @@ class Game():
 
 			if slowness != 1:
 				enemy.colour = (125, 0, 64)
+
+			pygame.draw.rect(self.screen, "blue", enemy.rect)		#Enemy hitbox
 			pygame.draw.circle(self.screen, enemy.colour, enemy.position, enemy.radius)
 			pygame.draw.circle(self.screen, "black", enemy.position, enemy.radius, 3)
 			#self.writeOnScreen(self.screen, str(enemy.position.x)+" "+str(enemy.position.y), enemy.position.x, enemy.position.y)
@@ -844,8 +883,50 @@ class Game():
 
 				weapon.setPositionBasedOnMovement(self.settings.speed, self.dt , 0.55)
 
-			
-			
+			if weapon.name == "Homing Arrow":
+				weapon.position_original.x = weapon.position.x
+				weapon.position_original.y = weapon.position.y
+				tempX = weapon.position.x
+				tempY = weapon.position.y
+				weapon.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				for pos in weapon.pathlist:
+					pos.x += weapon.position.x - tempX
+					pos.y += weapon.position.y - tempY
+
+				continue_rotation = False
+				closestEnemies: List[Union[Enemy, None]] = self.getClosestEnemy(weapon, 5)
+				if closestEnemies:
+					closestEnemies = [enemy for enemy in closestEnemies if enemy.hitCooldown <= 0]
+					if len(closestEnemies) > 0:
+						weapon.position_destination = pygame.Vector2(closestEnemies[0].position.x, closestEnemies[0].position.y)
+						if math.sqrt((self.player.position.x - weapon.position_destination.x)**2 + (self.player.position.y - weapon.position_destination.y)**2) + 1 < 1500:
+							distance = math.sqrt((weapon.position_destination.x - weapon.position_original.x)**2 + (weapon.position_destination.y - weapon.position_original.y)**2) + 1
+							sinus = abs((weapon.position_destination.y - weapon.position_original.y)/distance) * self.compare_subtraction(weapon.position_destination.y, weapon.position_original.y)
+							cosinus = abs((weapon.position_destination.x - weapon.position_original.x)/distance) * self.compare_subtraction(weapon.position_destination.x, weapon.position_original.x)
+
+							weapon.position.x += cosinus * weapon.speed
+							weapon.position.y += sinus * weapon.speed
+						else:
+							continue_rotation = True
+					else:
+						continue_rotation = True
+				else:
+					continue_rotation = True
+				if continue_rotation:
+					if weapon.position_destination.x == 0 and weapon.position_destination.y == 0:
+						weapon.position_destination.x = self.player.position.x - 100
+						weapon.position_destination.y = self.player.position.y - 100
+
+					weapon.position_destination.x = self.player.position.x + 200 * math.cos(weapon.rotation * math.pi / 180)
+					weapon.position_destination.y = self.player.position.y - 200 * math.sin(weapon.rotation * math.pi / 180)
+
+					weapon.position.x += (weapon.position_destination.x - weapon.position.x) * 0.035
+					weapon.position.y += (weapon.position_destination.y - weapon.position.y) * 0.035
+				
+				if len(weapon.pathlist) == 20 + weapon.level * 2:
+					weapon.pathlist.pop(0)
+				weapon.pathlist.append(pygame.Vector2(weapon.position_original.x, weapon.position_original.y))
+					
 			if weapon.cooldown_current <= 0:
 				if weapon.name == "Energy Orb":
 					if len(weapon.bullets) < (weapon.level + 1):
@@ -892,6 +973,14 @@ class Game():
 			
 			for bullet in weapon.bullets:
 				#self.writeOnScreen(str(bullet.crit), bullet.position.x, bullet.position.y) #Writing if the bullet is crit or not
+				if bullet.weaponname == "Homing Arrow":
+					if isinstance(bullet.lifeTime, float):
+						if bullet.lifeTime <= 0:
+							bullet.remove(weapon.bullets)
+							bullet.kill()
+						else:
+							bullet.lifeTime -= self.dt
+
 				if "thrown" in weapon.pattern and bullet.weaponname != "Damaging Field":
 					if bullet.position_destination.x == 0 and bullet.position_destination.y == 0:
 						bullet.position_destination.x = mouse_pos.x
@@ -1021,10 +1110,17 @@ class Game():
 					sinus = abs((bullet.position_destination.y - bullet.position_original.y)/distance) * self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y)
 					cosinus = abs((bullet.position_destination.x - bullet.position_original.x)/distance) * self.compare_subtraction(bullet.position_destination.x, bullet.position_original.x)
 
+					tempX = bullet.position.x
+					tempY = bullet.position.y
 					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
-
-					bullet.position.x += cosinus * weapon.speed
-					bullet.position.y += sinus * weapon.speed
+					if weapon.name == "Scatter Rifle" and "sctter" not in bullet.objtype:
+						bullet.position_destination.x += bullet.position.x - tempX
+						bullet.position_destination.y += bullet.position.y - tempY
+						bullet.position.x += (bullet.position_destination.x - bullet.position.x) * 0.002 * weapon.speed
+						bullet.position.y += (bullet.position_destination.y - bullet.position.y) * 0.002 * weapon.speed
+					else:
+						bullet.position.x += cosinus * weapon.speed
+						bullet.position.y += sinus * weapon.speed
 					
 					if weapon.name == "High-tech Rifle":
 						pygame.draw.line(self.screen, weapon.colour, (bullet.position.x - cosinus * weapon.size, bullet.position.y - sinus * weapon.size), (bullet.position.x, bullet.position.y), 15)
@@ -1072,10 +1168,24 @@ class Game():
 						if weapon.level == 5:
 							pygame.draw.line(self.screen, "blue", (bullet.position.x - cosinus * weapon.size/5, bullet.position.y - sinus * weapon.size/5), (bullet.position.x, bullet.position.y), 15)
 					
+					if weapon.name == "Scatter Rifle":
+						pygame.draw.circle(self.screen, weapon.colour, bullet.position, bullet.radius)
+						if weapon.level >= 3:
+							pygame.draw.circle(self.screen, "black", bullet.position, bullet.radius, 3)
+						if weapon.level == 5:
+							pygame.draw.circle(self.screen, "blue4", bullet.position, bullet.radius/1.3)
+
 					if isinstance(bullet.lifeTime, float):
 						if bullet.lifeTime <= 0:
-							bullet.remove(weapon.bullets)
-							bullet.kill()
+							if bullet.weaponname == "Scatter Rifle" and bullet.objtype != "bullet scatter":
+								b = weapon.getScatters(bullet)
+								weapon.bullets.add(b)
+								self.bulletGroup.add(b)
+								bullet.remove(weapon.bullets)
+								bullet.kill()
+							else:
+								bullet.remove(weapon.bullets)
+								bullet.kill()
 						else:
 							bullet.lifeTime -= self.dt
 
@@ -1188,6 +1298,15 @@ class Game():
 					pygame.draw.circle(self.screen, "black", (weapon.position.x + modifierSin, weapon.position.y + modifierCos), weapon.size/2, 3)
 
 				weapon.rotation += weapon.speed * 0.01
+			
+			if weapon.name == "Homing Arrow":
+				if len(weapon.pathlist[len(weapon.pathlist)-8:]) > 1 and weapon.level >= 3:
+					poslist = weapon.pathlist[len(weapon.pathlist)-8:] + weapon.pathlist[len(weapon.pathlist)-8:][::-1]
+					pygame.draw.polygon(self.screen, weapon.colour, [(pos.x + weapon.size / 4 * self.compare_subtraction(self.player.position.x, pos.x), pos.y) for pos in poslist], weapon.size)
+				
+				if weapon.level < 3:
+					pygame.draw.circle(self.screen, weapon.colour, weapon.position, weapon.size)
+				weapon.rotation += weapon.speed * 0.07
 	
 	def passiveCycle(self):
 		self.writeOnScreen(" ".join([":".join([name, str(passive.level)]) for name, passive in self.player_passives.items()]), 0 , 100)
@@ -1199,7 +1318,7 @@ class Game():
 						self.player.position.x + 750 * random.random() * self.getSign(),
 						self.player.position.y + 750 * random.random() * self.getSign()
 					)
-					self.WeaponKitGroup.add(WeaponKit(position))
+					self.ItemGroup.add(WeaponKit(position))
 			if passive.cooldown_current <= 0:
 				if passive.name == "Health Regeneration":
 					self.player.health_current += self.player.buffs["health regen"]
@@ -1222,7 +1341,7 @@ class Game():
 		if "Slowing Aura" in self.player_passives.keys():
 			passive = self.player_passives["Slowing Aura"]
 			passive.setHitbox(self.player.position, passive.value * 5 + 49 + 50 * passive.level)
-			pygame.draw.circle(self.traspscreen, (156, 89, 71, 255/100 * 75), passive.position, passive.radius)
+			pygame.draw.circle(self.traspscreen, (250, 150, 150, 255/100 * 55), passive.position, passive.radius)
 			pygame.draw.circle(self.screen, (0,0,0, 255), passive.position, passive.radius, 1)
 
 		if "Damaging Field" in self.player_weapons.keys():
@@ -1254,6 +1373,21 @@ class Game():
 							bullet.kill()
 						else:
 							bullet.lifeTime -= self.dt
+		if "Homing Arrow" in self.player_weapons.keys():
+			weapon = self.player_weapons["Homing Arrow"]
+			if len(weapon.pathlist[:len(weapon.pathlist)-6]) > 1:
+				if weapon.level < 3:
+					poslist = weapon.pathlist + weapon.pathlist[::-1]
+				if weapon.level >= 3:
+					poslist = weapon.pathlist[:len(weapon.pathlist)-6] + weapon.pathlist[:len(weapon.pathlist)-6][::-1]
+				if weapon.level == 5:
+					poslistStart = poslist[round(len(poslist)/4):round(len(poslist)*3/4)]
+					poslistEnd = [pos for pos in poslist if pos not in poslistStart]
+					poslistStart.append(poslistEnd[len(poslistEnd)//2])
+					pygame.draw.polygon(self.traspscreen, (255,50,50,255/100*55), poslistStart, weapon.level + 1)
+					pygame.draw.polygon(self.traspscreen, (255,100,0,255/100*55), poslistEnd, weapon.level + 1)
+				else:
+					pygame.draw.polygon(self.traspscreen, (255,50,50,255/100*55), poslist, weapon.level + 1)
 
 	def writeOnScreen(self, txt, posX = 0, posY = 0):
 		font = pygame.font.Font(None, 30)

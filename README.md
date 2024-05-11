@@ -177,9 +177,19 @@ Github repository for the second assignment of Programming II.
 
 -Added health kits to the game. When an enemy spawns there's a 5% chance that a health kit spawns at its palce. The kit restores 10 health. There will be mechanics that either increase the given health or the spawn chance.
 
-## TODO list:
+### Update v1.2.2
 
--Creating a buffs (and debuffs) list/dict/class for the player where I manage all the stat buffs for weapons, bullets, kits, player.
+-Changed the colour of slowing aura.
+
+-Finished mechanics, adjusted balance and finished design of scatter rifle.
+
+-Finished mechanics, adjusted balance and finished design of homing arrow.
+
+-Fixed hitbox of enemy.
+
+-Added option to upgrade a passive multiple times with a single function.
+
+## TODO list:
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
 
@@ -201,18 +211,20 @@ Github repository for the second assignment of Programming II.
 
 -Implementing all passives.
 
--Reducing lag when a large amount of sprite is on the screen. (e.g., experience disappeears after awhile / multiple ones for one big orb, reduce bullet counts (especially with culster bombs), reduce enemy count)
+-Reducing lag when a large amount of sprite is on the screen. (e.g., experience disappears after awhile / multiple ones for one big orb, reduce bullet counts (especially with culster bombs), reduce enemy count)
 
 -Creating all talent images. Implementing all talents.
 
 -Fixing the issue when a key from awsd is still pressed down when the selector menu opens, after the user chooses an option, the player character teleports based on the pressed button.
 
--Expanding the map, adding in background elements (e.g. stones, trees, a pond where the player can't go, etc.)
+-Adding in background elements (e.g. stones, trees, a pond where the player can't go, etc.)
 
 -Cleaning up the code by removing any unnececary lines and making it more efficient.
 
--New weapon: A cannon that shoots an orb that spreads in all direction after reaching a set distance/enemy.
+-Adding an arrow that points towards the nearest weaponkit.
 
--New weapon idea: Yondu's arrow.
+-Implementing that a maximum of 5 weapons can be equipped by the player.
+
+-Adding minibosses, bosses, and events (kinda like a quick time event, where you have to dodge a bunch of enemies or projectiles) to the game.
 
 There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)

@@ -10,9 +10,15 @@ class GameObject(pygame.sprite.Sprite):
 		self.position: pygame.Vector2 = position
 		self.width = width
 		self.height = height
-		if self.objtype in ["enemy", "player", "experience"] or (self.objtype == "bullet" and self.weaponname == "Damaging Field"):
+		if self.objtype in ["enemy", "player", "experience"] or ("bullet" in self.objtype and (self.weaponname == "Damaging Field" or "Scatter" in self.weaponname)):
 			self.radius = self.width / 2
-			self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
+			if self.objtype == "enemy":
+				print(self.position.x)
+				self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
+				print(self.rect.x)
+				print("\n")
+			else:
+				self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
 		else:
 			self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
 	
@@ -50,8 +56,10 @@ class GameObject(pygame.sprite.Sprite):
 			if keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
 				self.position.y -= speed * rate * ( dt / 2**(1/2) -  dt)
 				self.position.x -= speed * rate * ( dt / 2**(1/2) -  dt)
-
-		self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
+		if self.objtype in ["enemy", "experience"]:
+			self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
+		else:
+			self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
 
 class PlayerCharacter(GameObject):
 	def __init__(self, radius, position: pygame.Vector2, health, speed):
@@ -106,7 +114,7 @@ class PlayerCharacter(GameObject):
 		if self.experience_queue > 10:
 			self.experience_current += ((self.experience_queue // 100) + 10)
 			self.experience_queue -= ((self.experience_queue // 100) + 10)
-		elif self.experience_queue > 1:
+		elif self.experience_queue >= 1:
 			self.experience_current += ((self.experience_queue // 100) + 1)
 			self.experience_queue -= ((self.experience_queue // 100) + 1)
 		if self.experience_current >= self.experience_max:
@@ -147,60 +155,61 @@ class Passive():
 		self.radius = radius
 		self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.radius * 2, self.radius * 2)
 	
-	def upgradeItem(self, player: PlayerCharacter, amount = 1):	#TODO: IMPLEMENT AMOUNT
-		if self.level < 5:
-			self.level += 1
-		
-		if self.name == "Health Regeneration":
-			if self.level > 1:
-				self.value += 1
-				self.cooldown_max -= 1
-			player.updateBuffs(self.value, "health regen")
-		
-		if self.name == "Protective Barrier":
-			if self.level > 1:
-				self.value += 5
-				self.cooldown_max -= 1
-			player.updateBuffs(self.value, "barrier")
+	def upgradeItem(self, player: PlayerCharacter, amount = 1):
+		for i in range(amount):
+			if self.level < 5:
+				self.level += 1
+			
+			if self.name == "Health Regeneration":
+				if self.level > 1:
+					self.value += 1
+					self.cooldown_max -= 1
+				player.updateBuffs(self.value, "health regen")
+			
+			if self.name == "Protective Barrier":
+				if self.level > 1:
+					self.value += 5
+					self.cooldown_max -= 1
+				player.updateBuffs(self.value, "barrier")
 
-		if self.name == "Greater Strength":
-			if self.level > 1:
-				self.value += 0.05
+			if self.name == "Greater Strength":
+				if self.level > 1:
+					self.value += 0.05
+					player.updateBuffs(self.value, "damage percentage", self.name)
+				if self.level == 5:
+					player.updateBuffs(1, "damage flat", self.name)
+
+			if self.name == "Dodge":
+				if self.level > 1:
+					self.value += 1
+					self.cooldown_max -= 1
+
+			if self.name == "Crit rate":
+				if self.level > 1:
+					self.value += 0.05
+			
+			if self.name == "Gunslinger":
+				if self.level > 1:
+					self.value += 5
+					self.count += 1
+				player.updateBuffs(self.value, "gunslinger")
+
+			if self.name == "Berserk":
+				if self.level > 1:
+					self.value += 0.2
 				player.updateBuffs(self.value, "damage percentage", self.name)
-			if self.level == 5:
-				player.updateBuffs(1, "damage flat", self.name)
-
-		if self.name == "Dodge":
-			if self.level > 1:
-				self.value += 1
-				self.cooldown_max -= 1
-
-		if self.name == "Crit rate":
-			if self.level > 1:
-				self.value += 0.05
-		
-		if self.name == "Gunslinger":
-			if self.level > 1:
-				self.value += 5
-				self.count += 1
-			player.updateBuffs(self.value, "gunslinger")
-
-		if self.name == "Berserk":
-			if self.level > 1:
-				self.value += 0.2
-			player.updateBuffs(self.value, "damage percentage", self.name)
-		
-		if self.name == "Greater Vitality":
-			if self.level > 1:
-				self.value += 10
-			player.updateBuffs(self.value, "health flat", self.name)
-			if self.level == 5:
-				player.updateBuffs(0.2, "health percentage", self.name)
-		
-		if  self.name == "Slowing Aura":
-			if self.level > 1:
-				self.value += 0.1
-			self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
+			
+			if self.name == "Greater Vitality":
+				if self.level > 1:
+					self.value += 10
+				player.updateBuffs(self.value, "health flat", self.name)
+				if self.level == 5:
+					player.updateBuffs(0.2, "health percentage", self.name)
+			
+			if  self.name == "Slowing Aura":
+				if self.level > 1:
+					self.value += 0.1
+				self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
 
 	def getDescription(self):
 		dirname = os.path.dirname(__file__)
@@ -234,7 +243,7 @@ class Weapon(GameObject):
 		objtype = "weapon"
 		self.pattern: str = pattern
 		self.name: str = name
-		if self.name == "Energy Orb" or self.name == "Boomerang" or self.name == "Attack Drone":
+		if self.name == "Energy Orb" or self.name == "Boomerang" or self.name == "Attack Drone" or self.name == "Homing Arrow":
 			self.rotation = 0
 			self.distance = 150
 			position.x -= size
@@ -249,14 +258,25 @@ class Weapon(GameObject):
 		if self.name == "Attack Drone":
 			self.range = 300
 
+		if self.name == "Homing Arrow":
+			self.range = 500
+			self.pathlist: List[pygame.Vector2] = []
+
 		if self.name == "Damaging Field":
 			self.range = 800
 		
 		if self.name == "Cluster Bombs":
-			self.bomb_damage = 10
-			self.bomb_range = 50
-			self.bomb_count = 10
-			self.bullet_size = 10
+			self.projectile_damage = 10
+			self.projectile_range = 50
+			self.projectile_count = 10
+			self.projectile_size = 10
+
+		if self.name == "Scatter Rifle":
+			self.projectile_damage = 10
+			self.projectile_range = 350
+			self.projectile_count = 5
+			self.projectile_size = 10
+
 		
 		self.status_effects = {"slow":slow, "knockback":knockback, "weaken":weaken}
 
@@ -360,10 +380,20 @@ class Weapon(GameObject):
 						self.bulletLifeTime += 5
 						self.size += 3
 						self.damage += 7
-						self.bomb_damage += 5
-						self.bomb_count += 4
-						self.bomb_range += 22
-						self.bullet_size += 3
+						self.projectile_damage += 5
+						self.projectile_count += 4
+						self.projectile_range += 22
+						self.projectile_size += 3
+
+					if self.name == "Scatter Rifle":
+						self.cooldown_max -= 0.225
+						self.bulletLifeTime += 0.05
+						self.size += 5
+						self.damage += 10
+						self.projectile_damage += 7
+						self.projectile_count += 2
+						self.projectile_range += 50
+						self.projectile_size += 5
 					
 					if "circle" in self.pattern:
 						self.speed *= 1.1
@@ -382,30 +412,46 @@ class Weapon(GameObject):
 							self.damage += 5
 					
 					if "pet" in self.pattern:
-						if self.level > 1:
-							self.damage += 0.2 * self.level
-							self.range += 50
-							self.speed += 10
-							self.size += 2.5
+						self.damage += 0.2 * self.level
+						self.range += 50
+						self.speed += 10
+						self.size += 2.5
 							
 						if self.level == 5:
 							self.range += 50
+					
+					if self.name == "Homing Arrow":
+						self.damage += 2
+						self.range += 50
+						self.speed += 5
+						self.size += 2
+
 	
 	def getClusters(self, bullet: Bullet):
 		b = []
-		r = self.bomb_count
+		r = self.projectile_count
 		for i in range(r):
 			angle = 360 / r
-			destination = pygame.Vector2(bullet.position.x + self.bomb_range * math.cos(i * angle * math.pi / 180), bullet.position.y + self.bomb_range * math.sin(i * angle * math.pi / 180))
+			destination = pygame.Vector2(bullet.position.x + self.projectile_range * math.cos(i * angle * math.pi / 180), bullet.position.y + self.projectile_range * math.sin(i * angle * math.pi / 180))
 			position = pygame.Vector2(bullet.position.x, bullet.position.y)
-			b.append(Bullet("Cluster Bombs", position, position, destination, 8 + (self.level - 1), self.bomb_damage, False, "bullet mine", self.bullet_size))
+			b.append(Bullet("Cluster Bombs", position, position, destination, 8 + (self.level - 1), self.projectile_damage, False, "bullet mine", self.projectile_size))
+		return b
+	
+	def getScatters(self, bullet: Bullet):
+		b = []
+		r = self.projectile_count
+		for i in range(r):
+			angle = 360 / r
+			destination = pygame.Vector2(bullet.position.x + self.projectile_range * math.cos(i * angle * math.pi / 180), bullet.position.y + self.projectile_range * math.sin(i * angle * math.pi / 180))
+			position = pygame.Vector2(bullet.position.x, bullet.position.y)
+			b.append(Bullet("Scatter Rifle", position, position, destination, 1.2, self.projectile_damage, False, "bullet scatter", self.projectile_size))
 		return b
 
 class Enemy(GameObject):
+
 	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal"):
 		objtype = "enemy"
-		width_and_height = radius * 2
-		super().__init__(objtype, position, width_and_height, width_and_height)
+		super().__init__(objtype, position, radius * 2, radius * 2)
 
 		self.position_original = pygame.Vector2(position.x, position.y)
 		self.position_destination = pygame.Vector2(0,0)
