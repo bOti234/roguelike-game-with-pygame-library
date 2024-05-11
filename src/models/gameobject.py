@@ -19,37 +19,38 @@ class GameObject(pygame.sprite.Sprite):
 	def setHitbox(self):
 		pass
 	
-	def setPositionBasedOnMovement(self, speed, dt, gate, rate = 1):
+	def setPositionBasedOnMovement(self, speed, dt, rate = 1):
 		keys = pygame.key.get_pressed()
 		#TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
-
-		if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
-			self.position.y += speed * dt / 2**(1/2) * rate
-			self.position.x += speed * dt / 2**(1/2) * rate
-
-		elif keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
-			self.position.y += speed * dt / 2**(1/2) * rate
-			self.position.x -= speed * dt / 2**(1/2) * rate
-
-		elif keys[pygame.K_w]:# and "up" not in gate:
+		if keys[pygame.K_w]:# and "up" not in gate:
 			self.position.y += speed * dt * rate
 
-		elif keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
-			self.position.y -= speed * dt / 2**(1/2) * rate
-			self.position.x += speed * dt / 2**(1/2) * rate
-
-		elif keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
-			self.position.y -= speed * dt / 2**(1/2) * rate
-			self.position.x -= speed * dt / 2**(1/2) * rate
-
-		elif keys[pygame.K_s]:# and "down" not in gate:
-			self.position.y -= speed * dt * rate
-
-		elif keys[pygame.K_a]:# and "left" not in gate:
+		if keys[pygame.K_a]:# and "left" not in gate:
 			self.position.x += speed * dt * rate
 
-		elif keys[pygame.K_d]:# and "right" not in gate:
+		if keys[pygame.K_s]:# and "down" not in gate:
+			self.position.y -= speed * dt * rate
+
+		if keys[pygame.K_d]:# and "right" not in gate:
 			self.position.x -= speed * dt * rate
+
+		if [keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d]].count(True) == 2:
+			if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
+				self.position.y += speed * rate * ( dt / 2**(1/2) -  dt)
+				self.position.x += speed * rate * ( dt / 2**(1/2) -  dt)
+
+			if keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
+				self.position.y += speed * rate * ( dt / 2**(1/2) -  dt)
+				self.position.x -= speed * rate * ( dt / 2**(1/2) -  dt)
+
+			if keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
+				self.position.y -= speed * rate * ( dt / 2**(1/2) -  dt)
+				self.position.x += speed * rate * ( dt / 2**(1/2) -  dt)
+
+			if keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
+				self.position.y -= speed * rate * ( dt / 2**(1/2) -  dt)
+				self.position.x -= speed * rate * ( dt / 2**(1/2) -  dt)
+
 		self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
 
 class PlayerCharacter(GameObject):
@@ -76,7 +77,7 @@ class PlayerCharacter(GameObject):
 		self.setStats()
 		self.health_current = self.health_max
 		self.hitCooldown = 0
-		self.experience_max: int = 150
+		self.experience_max: int = 500
 		self.experience_current: int = 0
 		self.experience_queue: int = 0
 	
@@ -102,7 +103,10 @@ class PlayerCharacter(GameObject):
 			n += 1
 			self.experience_queue -= int(self.experience_max)
 			self.experience_max = int(round(self.experience_max * 1.2))
-		if self.experience_queue > 0:
+		if self.experience_queue > 10:
+			self.experience_current += ((self.experience_queue // 100) + 10)
+			self.experience_queue -= ((self.experience_queue // 100) + 10)
+		elif self.experience_queue > 1:
 			self.experience_current += ((self.experience_queue // 100) + 1)
 			self.experience_queue -= ((self.experience_queue // 100) + 1)
 		if self.experience_current >= self.experience_max:
@@ -398,7 +402,7 @@ class Weapon(GameObject):
 		return b
 
 class Enemy(GameObject):
-	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 20, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal"):
+	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal"):
 		objtype = "enemy"
 		width_and_height = radius * 2
 		super().__init__(objtype, position, width_and_height, width_and_height)
@@ -408,7 +412,7 @@ class Enemy(GameObject):
 		self.level = level
 		if self.level > 21:
 			self.level = 21
-		self.radius = radius + (self.level - 1) * 1.25
+		self.radius = radius
 		self.health = health + (self.level - 1) * 5
 		self.colour = colour
 		self.damage = damage + (self.level - 1) * 1
@@ -445,16 +449,30 @@ class Experience(GameObject):
 		self.colour = colour
 		self.value = value
 		self.min_distance = 200
+
+		self.r = 254
+		self.g = 0
+		self.b = 0
 	
 	def setMinDistance(self, dist):
 		self.min_distance = dist
 
-class WeaponKit(GameObject):
-	def __init__(self, randpos, width = 50, height = 50):
-		objtype = "weaponkit"
-		super().__init__(objtype, randpos, width, height)
+class Item(GameObject):
+	def __init__(self, objtype, position, width, height):
+		super().__init__(objtype, position, width, height)
 
-class Magnet(GameObject):
+class WeaponKit(Item):
+	def __init__(self, position, width = 50, height = 50):
+		objtype = "weaponkit"
+		super().__init__(objtype, position, width, height)
+
+class HealthKit(Item):
+	def __init__(self, position, width = 30, height = 30):
+		objtype = "healthkit"
+		self.lifetime = 30
+		super().__init__(objtype, position, width, height)
+
+class Magnet(Item):
 	def __init__(self, randpos, width, height):
 		objtype = "magnet"
 		super().__init__(objtype, randpos, width, height)

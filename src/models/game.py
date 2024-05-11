@@ -7,7 +7,7 @@ import screeninfo
 from typing import List, Dict, Union
 from player import User
 from gamesettings import GameSettings
-from gameobject import GameObject, PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, Magnet, HUD, Inventory, Menu
+from gameobject import GameObject, PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet, HUD, Inventory, Menu
 
 class Game():
 	def __init__(self):
@@ -55,12 +55,11 @@ class Game():
 			self.player_weapons[self.weaponlist[0].name].upgradeItem()
 
 		self.bulletGroup: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
-		self.WeaponKitGroup: pygame.sprite.Group[WeaponKit] = pygame.sprite.Group()
-		self.MagnetGroup: pygame.sprite.Group[Magnet] = pygame.sprite.Group()
+		self.ItemGroup: pygame.sprite.Group[Union[WeaponKit, HealthKit, Magnet]] = pygame.sprite.Group()
 		self.EnemyGroup: pygame.sprite.Group[Enemy] = pygame.sprite.Group()
 		self.experienceGroup: pygame.sprite.Group[Experience] = pygame.sprite.Group()
 
-		self.WeaponKitGroup.add(WeaponKit(pygame.Vector2(self.player.position.x + 200, self.player.position.y + 200)))
+		self.ItemGroup.add(WeaponKit(pygame.Vector2(self.player.position.x + 200, self.player.position.y + 200)))
 
 		self.WeaponKitCooldown = 0
 		self.MagnetCooldown = 0
@@ -380,8 +379,7 @@ class Game():
 				self.spawnMagnet()
 				self.spawnEnemies()
 
-				self.updateWeaponKitPosition()
-				self.updateMagnetPosition()
+				self.updateItemPosition()
 				self.updateEnemyPosition()
 				self.updateExperiencePosition()
 
@@ -458,54 +456,56 @@ class Game():
 
 
 	def notTouchingBorder(self):
-		li = []
-		if (self.background.x - self.settings.screen_width + self.settings.game_size**2*2 - self.player.radius + 300 * self.dt)  <= self.player.position.x:
-			li.append(False)
-			li.append("right")
-		if (self.background.x - self.settings.screen_width + self.player.radius + 300 * self.dt)  >= self.player.position.x:
-			li.append(False)
-			li.append("left")
-		if (self.background.y - self.settings.screen_height + self.player.radius + 300 * self.dt)  >= self.player.position.y:
-			li.append(False)
-			li.append("up")
-		if (self.background.y - self.settings.screen_height + self.settings.game_size**2*2 - self.player.radius + 300 * self.dt)  <= self.player.position.y:
-			li.append(False)
-			li.append("down")
-		if len(li) == 0:
-			li = [True, "nothing"]
-		return list(set(li))
+		# li = []
+		# if (self.background.x - self.settings.screen_width + self.settings.game_size**2*2 - self.player.radius + 300 * self.dt)  <= self.player.position.x:
+		# 	li.append(False)
+		# 	li.append("right")
+		# if (self.background.x - self.settings.screen_width + self.player.radius + 300 * self.dt)  >= self.player.position.x:
+		# 	li.append(False)
+		# 	li.append("left")
+		# if (self.background.y - self.settings.screen_height + self.player.radius + 300 * self.dt)  >= self.player.position.y:
+		# 	li.append(False)
+		# 	li.append("up")
+		# if (self.background.y - self.settings.screen_height + self.settings.game_size**2*2 - self.player.radius + 300 * self.dt)  <= self.player.position.y:
+		# 	li.append(False)
+		# 	li.append("down")
+		# if len(li) == 0:
+		# 	li = [True, "nothing"]
+		# return list(set(li))
+		pass
 	
-	def checkKeysPressed(self):
+	def checkKeysPressed(self, rate = 1):
 		keys = pygame.key.get_pressed()
-		gate = self.notTouchingBorder()   #TODO: CHECK WHAT HAPPENS WHEN >2 BUTTONS ARE PRESSED
-		if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
-			self.background.y += self.settings.speed * self.dt / 2**(1/2)
-			self.background.x += self.settings.speed * self.dt / 2**(1/2)
+		#gate = self.notTouchingBorder()
+		if keys[pygame.K_w]:# and "up" not in gate:
+			self.background.y += self.settings.speed * self.dt * rate
 
-		elif keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
-			self.background.y += self.settings.speed * self.dt / 2**(1/2)
-			self.background.x -= self.settings.speed * self.dt / 2**(1/2)
+		if keys[pygame.K_s]:# and "down" not in gate:
+			self.background.y -= self.settings.speed * self.dt * rate
 
-		elif keys[pygame.K_w]:# and "up" not in gate:
-			self.background.y += self.settings.speed * self.dt
+		if keys[pygame.K_a]:# and "left" not in gate:
+			self.background.x += self.settings.speed * self.dt * rate
 
-		elif keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
-			self.background.y -= self.settings.speed * self.dt / 2**(1/2)
-			self.background.x += self.settings.speed * self.dt / 2**(1/2)
+		if keys[pygame.K_d]:# and "right" not in gate:
+			self.background.x -= self.settings.speed * self.dt * rate
 
-		elif keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
-			self.background.y -= self.settings.speed * self.dt / 2**(1/2)
-			self.background.x -= self.settings.speed * self.dt / 2**(1/2)
+		if [keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d]].count(True) == 2:
+			if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
+				self.background.y += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+				self.background.x += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-		elif keys[pygame.K_s]:# and "down" not in gate:
-			self.background.y -= self.settings.speed * self.dt
+			if keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
+				self.background.y += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+				self.background.x -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-		elif keys[pygame.K_a]:# and "left" not in gate:
-			self.background.x += self.settings.speed * self.dt
+			if keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
+				self.background.y -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+				self.background.x += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-		elif keys[pygame.K_d]:# and "right" not in gate:
-			self.background.x -= self.settings.speed * self.dt
-		
+			if keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
+				self.background.y -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+				self.background.x -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+
 		if keys[pygame.K_ESCAPE]:
 			if not self.onpause:
 				m1 = Menu()
@@ -513,17 +513,18 @@ class Game():
 
 	def checkHitboxes(self):
 		self.writeOnScreen(str(self.player.position.x)+" "+str(self.player.position.y), self.player.position.x, self.player.position.y)
-		for kit in self.WeaponKitGroup:
-			if pygame.sprite.collide_rect(kit, self.player):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
-				kit.kill()
-				response = self.openSelectWeaponMenu()
-		
-		for magnet in self.MagnetGroup:
-			if pygame.sprite.collide_rect(magnet, self.player):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
-				magnet.kill()
-				for exp in self.experienceGroup:
-					exp.setMinDistance(10000)
-		
+		for item in self.ItemGroup:
+			if pygame.sprite.collide_rect(item, self.player):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
+				item.kill()
+				if item.objtype == "weaponkit":
+					response = self.openSelectWeaponMenu()
+				elif item.objtype == "healthkit":
+					self.player.health_current += 10
+					if self.player.health_current > self.player.health_max:
+						self.player.health_current = self.player.health_max
+				elif item.objtype == "magnet":
+					for exp in self.experienceGroup:
+						exp.setMinDistance(10000)	
 		
 		for bullet in self.bulletGroup:
 			for enemy in self.EnemyGroup:
@@ -588,7 +589,7 @@ class Game():
 				
 		if enemy.health <= 0:
 			# if enemy in self.EnemyGroup:
-			self.spawnExperienceOrb(enemy)
+			self.spawnEnemyDrops(enemy)
 			enemy.kill()
 			if bullet.weaponname == "Attack Drone":
 				bullet.kill()
@@ -600,11 +601,11 @@ class Game():
 				chance = random.random()
 				if chance > 0.65:
 					randpos = pygame.Vector2(
-						random.randint(round(self.background.x - self.settings.screen_width), round(self.background.x - self.settings.screen_width + self.settings.game_size**2 * 2)), 
-						random.randint(round(self.background.y - self.settings.screen_height), round(self.background.y - self.settings.screen_height + self.settings.game_size**2 * 2))
+						random.randint(round(self.player.position.x + 250), round(self.player.position.x + 500)) * self.getSign(), 
+						random.randint(round(self.player.position.y + 250), round(self.player.position.y + 500)) * self.getSign()
 						)
 					kit = WeaponKit(randpos)
-					self.WeaponKitGroup.add(kit)
+					self.ItemGroup.add(kit)
 					self.WeaponKitCooldown = 70  - (self.time // 30) - self.player.buffs["gunslinger"]
 					if self.WeaponKitCooldown < 15:
 							self.WeaponKitCooldown = 15
@@ -618,11 +619,11 @@ class Game():
 			chance = random.random()
 			if chance > 0.08:
 				randpos = pygame.Vector2(
-					random.randint(round(self.background.x - self.settings.screen_width), round(self.background.x - self.settings.screen_width + self.settings.game_size**2 * 2)), 
-					random.randint(round(self.background.y - self.settings.screen_height), round(self.background.y - self.settings.screen_height + self.settings.game_size**2 * 2))
-					)
+						random.randint(round(self.player.position.x + 250), round(self.player.position.x + 500)) * self.getSign(), 
+						random.randint(round(self.player.position.y + 250), round(self.player.position.y + 500)) * self.getSign()
+						)
 				magnet = Magnet(randpos, 50, 50)
-				self.MagnetGroup.add(magnet)
+				self.ItemGroup.add(magnet)
 				self.MagnetCooldown = 120  - (self.time // 30)  #TODO MAKE IT A SETTING/MODIFIER
 				if self.MagnetCooldown < 60:
 					self.MagnetCooldown = 60
@@ -633,24 +634,31 @@ class Game():
 	
 	def spawnEnemies(self):
 		if self.EnemyCooldown <= 0:
-			for i in range(10 + int((self.time // 60) * 10)):
+			for i in range(10 + int((self.time // 30))):
 				chance = random.random()
 				if chance > 0.3 - (self.time // 60) * 0.02:
+
 					randpos = pygame.Vector2(
-						random.randint(round(self.background.x - self.settings.screen_width), round(self.background.x - self.settings.screen_width + self.settings.game_size**2 * 2)), 
-						random.randint(round(self.background.y - self.settings.screen_height), round(self.background.y - self.settings.screen_height + self.settings.game_size**2 * 2))
+						random.randint(round(self.player.position.x + 500), round(self.player.position.x + 1000)) * self.getSign(), 
+						random.randint(round(self.player.position.y + 500), round(self.player.position.y + 1000)) * self.getSign()
 						)
-					enemy = Enemy(randpos, (self.time // 30) + 1)
+					enemy = Enemy(randpos, (self.time // 60) + 1)
 					enemy.setStatusDict(self.weaponlist)
 					self.EnemyGroup.add(enemy)
-					self.EnemyCooldown = 10 - (self.time // 60)          #TODO MAKE IT A SETTING/MODIFIER
-					if self.EnemyCooldown < 5:
-						self.EnemyCooldow = 5
+					self.EnemyCooldown = 10         #TODO MAKE IT A SETTING/MODIFIER
+					if self.EnemyCooldown < 10:
+						self.EnemyCooldow = 10
 		else:
 			self.EnemyCooldown -= self.dt
 	
-	def spawnExperienceOrb(self, enemy: Enemy):
+	def spawnEnemyDrops(self, enemy: Enemy):
 		chance = random.random()
+
+		if chance < 0.05:
+			position = pygame.Vector2(enemy.position.x - enemy.width/2, enemy.position.y - enemy.height/2)
+			kit = HealthKit(position)
+			self.ItemGroup.add(kit)
+
 		if chance < 0.25 and enemy.type == "miniboss":
 			e = Experience(enemy.position, 20, "purple", enemy.level * 5000)
 		elif (chance < 1/3 and enemy.type == "brute") or ( chance < 0.9 and enemy.type == "miniboss"):
@@ -658,39 +666,51 @@ class Game():
 		elif chance < 0.2 or enemy.type == "brute" or enemy.type == "miniboss":
 			e = Experience(enemy.position, 12, "yellow", enemy.level * 100)
 		else:
-			e = Experience(enemy.position, 8, "white", enemy.level * 10)
+			e = Experience(enemy.position, 8, "white", enemy.level * 20)
+
 		self.experienceGroup.add(e)
 	
-	def updateWeaponKitPosition(self):
-		for kit in self.WeaponKitGroup:
-			kit.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
-			rect = pygame.Rect(kit.position.x, kit.position.y, kit.width, kit.height)
-			pygame.draw.rect(self.screen, "gray", rect)
-			pygame.draw.rect(self.screen, "black", rect, 3)
+	def updateItemPosition(self):
+		for item in self.ItemGroup:
+			if item.objtype == "weaponkit":
+				item.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				rect = pygame.Rect(item.position.x, item.position.y, item.width, item.height)
+				pygame.draw.rect(self.screen, "gray", rect)
+				pygame.draw.rect(self.screen, "black", rect, 3)
+
+			elif item.objtype == "healthkit":
+				item.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				rect = pygame.Rect(item.position.x, item.position.y, item.width, item.height)
+				pygame.draw.rect(self.screen, "green", rect)
+				pygame.draw.rect(self.screen, "black", rect, 3)
+				if item.lifetime > 0:
+					item.lifetime -= self.dt
+				else:
+					item.kill()
+
+			elif item.objtype == "magnet":
+				item.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				rect = pygame.Rect(item.position.x, item.position.y, item.width, item.height)
+				pygame.draw.arc(self.screen, "black", rect, math.radians(0), math.radians(180), 23)
+				pygame.draw.arc(self.screen, "red", rect, math.radians(90), math.radians(180), 20)
+				pygame.draw.arc(self.screen, "blue", rect, math.radians(0), math.radians(90), 20)
+				pygame.draw.arc(self.screen, "black", rect, math.radians(0), math.radians(180), 3)
+
+				pygame.draw.line(self.screen, "black", (item.position.x + 23/2, item.position.y + item.height / 2), (item.position.x + 23/2, item.position.y + item.height), 20)
+				pygame.draw.line(self.screen, "red", (item.position.x + 19/2, item.position.y + item.height / 2), (item.position.x + 19/2, item.position.y + item.height), 19)
+				pygame.draw.line(self.screen, "gray50", (item.position.x + 19/2, item.position.y + item.height * 3 / 4), (item.position.x + 19/2, item.position.y + item.height), 19)
+				pygame.draw.line(self.screen, "black", (item.position.x + 1, item.position.y + item.height / 2), (item.position.x + 1, item.position.y + item.height), 3)
+
+				pygame.draw.line(self.screen, "black", (item.position.x + item.width - 31/2, item.position.y + item.height / 2), (item.position.x + item.width - 31/2, item.position.y + item.height), 18)
+				pygame.draw.line(self.screen, "blue", (item.position.x + item.width - 27/2, item.position.y + item.height / 2), (item.position.x + item.width - 27/2, item.position.y + item.height), 18)
+				pygame.draw.line(self.screen, "gray50", (item.position.x + item.width - 27/2, item.position.y + item.height * 3 / 4), (item.position.x + item.width - 27/2, item.position.y + item.height), 18)
+				pygame.draw.line(self.screen, "black", (item.position.x + item.width - 6/2, item.position.y + item.height / 2), (item.position.x + item.width - 6/2, item.position.y + item.height), 4)
+
+				pygame.draw.line(self.screen, "black", (item.position.x, item.position.y + item.height), (item.position.x + 20, item.position.y + item.height), 2)
+				pygame.draw.line(self.screen, "black", (item.position.x + item.width - 22, item.position.y + item.height), (item.position.x + item.width - 1, item.position.y + item.height), 2)
+		
 			#self.writeOnScreen(self.screen, str(kit.position.x)+" "+str(kit.position.y), kit.position.x, kit.position.y)
-	
-	def updateMagnetPosition(self):
-		for magnet in self.MagnetGroup:
-			magnet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
-			rect = pygame.Rect(magnet.position.x, magnet.position.y, magnet.width, magnet.height)
-			pygame.draw.arc(self.screen, "black", rect, math.radians(0), math.radians(180), 23)
-			pygame.draw.arc(self.screen, "red", rect, math.radians(90), math.radians(180), 20)
-			pygame.draw.arc(self.screen, "blue", rect, math.radians(0), math.radians(90), 20)
-			pygame.draw.arc(self.screen, "black", rect, math.radians(0), math.radians(180), 3)
 
-			pygame.draw.line(self.screen, "black", (magnet.position.x + 23/2, magnet.position.y + magnet.height / 2), (magnet.position.x + 23/2, magnet.position.y + magnet.height), 20)
-			pygame.draw.line(self.screen, "red", (magnet.position.x + 19/2, magnet.position.y + magnet.height / 2), (magnet.position.x + 19/2, magnet.position.y + magnet.height), 19)
-			pygame.draw.line(self.screen, "gray50", (magnet.position.x + 19/2, magnet.position.y + magnet.height * 3 / 4), (magnet.position.x + 19/2, magnet.position.y + magnet.height), 19)
-			pygame.draw.line(self.screen, "black", (magnet.position.x + 1, magnet.position.y + magnet.height / 2), (magnet.position.x + 1, magnet.position.y + magnet.height), 3)
-
-			pygame.draw.line(self.screen, "black", (magnet.position.x + magnet.width - 31/2, magnet.position.y + magnet.height / 2), (magnet.position.x + magnet.width - 31/2, magnet.position.y + magnet.height), 18)
-			pygame.draw.line(self.screen, "blue", (magnet.position.x + magnet.width - 27/2, magnet.position.y + magnet.height / 2), (magnet.position.x + magnet.width - 27/2, magnet.position.y + magnet.height), 18)
-			pygame.draw.line(self.screen, "gray50", (magnet.position.x + magnet.width - 27/2, magnet.position.y + magnet.height * 3 / 4), (magnet.position.x + magnet.width - 27/2, magnet.position.y + magnet.height), 18)
-			pygame.draw.line(self.screen, "black", (magnet.position.x + magnet.width - 6/2, magnet.position.y + magnet.height / 2), (magnet.position.x + magnet.width - 6/2, magnet.position.y + magnet.height), 4)
-
-			pygame.draw.line(self.screen, "black", (magnet.position.x, magnet.position.y + magnet.height), (magnet.position.x + 20, magnet.position.y + magnet.height), 2)
-			pygame.draw.line(self.screen, "black", (magnet.position.x + magnet.width - 22, magnet.position.y + magnet.height), (magnet.position.x + magnet.width - 1, magnet.position.y + magnet.height), 2)
-	
 	def updateEnemyPosition(self):
 		for enemy in self.EnemyGroup:
 
@@ -721,7 +741,7 @@ class Game():
 
 			enemy.updateStatusDict(self.dt)
 
-			enemy.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+			enemy.setPositionBasedOnMovement(self.settings.speed, self.dt)
 			if enemy.hitCooldown > 0:
 				enemy.colour = "darkred"
 				enemy.hitCooldown -= self.dt
@@ -743,7 +763,7 @@ class Game():
 
 			tempX = exp.position.x
 			tempY = exp.position.y
-			exp.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+			exp.setPositionBasedOnMovement(self.settings.speed, self.dt)
 			
 
 			if distance < exp.min_distance:
@@ -754,9 +774,35 @@ class Game():
 					exp.position.x += (exp.position_destination.x - exp.position.x) * 0.075
 					exp.position.y += (exp.position_destination.y - exp.position.y) * 0.075
 
-			
+			if exp.colour == "white":	#TEMPORARY
+				if exp.r == 254 and exp.g < 254 and exp.b == 0:
+					exp.g += 34
+					if exp.g >= 254:
+						exp.g = 254
+				elif  exp.r > 0 and exp.g == 254 and exp.b < 254:
+					exp.r -= 34
+					if exp.r <= 0:
+						exp.r = 0
+				elif exp.r == 0 and exp.g == 254 and exp.b < 254:
+					exp.b += 34
+					if exp.b >= 254:
+						exp.b = 254
+				elif exp.r == 0 and exp.g > 0 and exp.b == 254:
+					exp.g -= 34
+					if exp.g <= 0:
+						exp.g = 0
+				elif exp.r < 254 and exp.g == 0 and exp.b == 254:
+					exp.r += 34
+					if exp.r >= 254:
+						exp.r = 254
+				elif exp.r == 254 and exp.g == 0 and exp.b > 0:
+					exp.b -= 34
+					if exp.b <= 0:
+						exp.b = 0
+				pygame.draw.circle(self.screen, (exp.r, exp.g, exp.b, 255), exp.position, exp.radius)
 
-			pygame.draw.circle(self.screen, exp.colour, exp.position, exp.radius)
+			else:
+				pygame.draw.circle(self.screen, exp.colour, exp.position, exp.radius)
 			pygame.draw.circle(self.screen, "black", exp.position, exp.radius, 2)
 	
 	def getClosestEnemy(self, weapon: Weapon, n: int = 1):
@@ -796,7 +842,7 @@ class Game():
 				weapon.position.x += (weapon.position_destination.x - weapon.position.x) * 0.035
 				weapon.position.y += (weapon.position_destination.y - weapon.position.y) * 0.035
 
-				weapon.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder(), 0.55)
+				weapon.setPositionBasedOnMovement(self.settings.speed, self.dt , 0.55)
 
 			
 			
@@ -859,13 +905,13 @@ class Game():
 						if math.sqrt((bullet.position.x - bullet.position_original.x)**2 + (bullet.position.y - bullet.position_original.y)**2) + 1 >= distance - 15:
 							bullet.position.x = bullet.position_destination.x
 							bullet.position.y = bullet.position_destination.y
-							bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+							bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 							bullet.position_destination.x = bullet.position.x
 							bullet.position_destination.y = bullet.position.y
 						else:
 							tempX = bullet.position.x
 							tempY = bullet.position.y
-							bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+							bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 							bullet.position_destination.x += bullet.position.x - tempX
 							bullet.position_destination.y += bullet.position.y - tempY
 							bullet.position.x += cosinus * weapon.speed * 0.35
@@ -880,7 +926,7 @@ class Game():
 
 						#tempX = bullet.position.x
 						#tempY = bullet.position.y
-						bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+						bullet.setPositionBasedOnMovement(self.settings.speed, self.dt )
 
 						bullet.position_destination.x = bullet.position.x# - tempX
 						bullet.position_destination.y = bullet.position.y# - tempY
@@ -901,7 +947,7 @@ class Game():
 
 						tempX = bullet.position.x
 						tempY = bullet.position.y
-						bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+						bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 
 						bullet.position_destination.x += bullet.position.x - tempX
 						bullet.position_destination.y += bullet.position.y - tempY
@@ -937,7 +983,7 @@ class Game():
 
 					tempX = bullet.position.x
 					tempY = bullet.position.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt )
 
 					bullet.position_destination.x += bullet.position.x - tempX
 					bullet.position_destination.y += bullet.position.y - tempY
@@ -975,7 +1021,7 @@ class Game():
 					sinus = abs((bullet.position_destination.y - bullet.position_original.y)/distance) * self.compare_subtraction(bullet.position_destination.y, bullet.position_original.y)
 					cosinus = abs((bullet.position_destination.x - bullet.position_original.x)/distance) * self.compare_subtraction(bullet.position_destination.x, bullet.position_original.x)
 
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 
 					bullet.position.x += cosinus * weapon.speed
 					bullet.position.y += sinus * weapon.speed
@@ -1039,7 +1085,7 @@ class Game():
 
 					bullet.position.x = self.player.position.x + weapon.distance * math.cos(bullet.rotation * math.pi / 180)
 					bullet.position.y = self.player.position.y + weapon.distance * math.sin(bullet.rotation * math.pi / 180)
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 
 					pygame.draw.circle(self.screen, weapon.colour, (bullet.position.x, bullet.position.y), weapon.size)
 
@@ -1101,7 +1147,7 @@ class Game():
 
 					tempX = bullet.position.x
 					tempY = bullet.position.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 					bullet.position_destination.x -= (tempX - bullet.position.x)
 					bullet.position_destination.y -= (tempY - bullet.position.y)
 					bullet.position_original.x -= (tempX - bullet.position.x)
@@ -1185,7 +1231,7 @@ class Game():
 				if weapon.name == "Damaging Field":
 					bullet.position.x = bullet.position_destination.x
 					bullet.position.y = bullet.position_destination.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt, self.notTouchingBorder())
+					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt )
 
 					bullet.position_destination.x = bullet.position.x
 					bullet.position_destination.y = bullet.position.y

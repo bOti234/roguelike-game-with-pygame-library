@@ -169,6 +169,14 @@ Github repository for the second assignment of Programming II.
 
 -Made the background follow the player, so wherever they go there's a background behind them. I also don't have to load a thousand images every time.
 
+### Update v1.2.1
+
+-Changed movement of player, it turns out most of the keyboards are not able to register when more than 2 of the keys are pressed down.
+
+-Made the white experience orb rainbow coloured. This will be changed to a more rare experience type.
+
+-Added health kits to the game. When an enemy spawns there's a 5% chance that a health kit spawns at its palce. The kit restores 10 health. There will be mechanics that either increase the given health or the spawn chance.
+
 ## TODO list:
 
 -Creating a buffs (and debuffs) list/dict/class for the player where I manage all the stat buffs for weapons, bullets, kits, player.
