@@ -239,7 +239,7 @@ class Bullet(GameObject):
 		self.animation_rotation = rotation
 
 class Weapon(GameObject):
-	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], damage: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
+	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], charge: int, damage: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
 		objtype = "weapon"
 		self.pattern: str = pattern
 		self.name: str = name
@@ -285,16 +285,18 @@ class Weapon(GameObject):
 		self.cooldown_max: float = cooldown_max
 		self.cooldown_current: float = cooldown_max
 		self.dmgtype: str = dmgtype
-		self.level = 0
+		self.level: int = 0
 		self.colour: str = colour
 		self.size: int = size
 		self.speed: int = speed
-		self.bulletLifeTime = bulletlifetime
+		self.bulletLifeTime: float = bulletlifetime
+		self.charge_max: int = charge
+		self.charge_current: int = charge
 		self.damage = damage
 		self.bullets: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
 		self.position_original = pygame.Vector2(position.x, position.y)
 		self.position_destination = pygame.Vector2(0,0)
-		self.animation = False
+		self.animation: bool = False
 		self.description = self.getDescription()
 
 		self.loadImages()
@@ -345,8 +347,8 @@ class Weapon(GameObject):
 					
 					if self.name == "High-tech Rifle":
 						self.cooldown_max -= 0.1 * (5 - self.level)
-						if self.level == 3:
-							self.pattern = "multiple straight"
+						if self.level >= 3:
+							self.charge_max += 1
 						if self.level == 5:
 							self.damage += 15
 							self.speed -= 3
@@ -373,6 +375,7 @@ class Weapon(GameObject):
 						self.bulletLifeTime += 0.05
 						self.damage -= 4 - self.level
 						if self.level >= 4:
+							self.charge_max += 1
 							self.damage += 1
 					
 					if "cluster" in self.pattern:

@@ -162,8 +162,9 @@ class Game():
 			pattern = "single straight", 
 			colour = "white", 
 			size = 30, 
-			speed = 25, 
+			speed = 5, 
 			bulletlifetime = 2.1, 
+			charge = 1,
 			damage = 15, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.0,
@@ -180,6 +181,7 @@ class Game():
 			size = 15, 
 			speed = 40, 
 			bulletlifetime = "inf", 
+			charge = 1,
 			damage = 15,
 			position = pygame.Vector2(0, 0),
 			slow = 0.0,
@@ -196,6 +198,7 @@ class Game():
 			size = 25, 
 			speed = 15, 
 			bulletlifetime = "inf", 
+			charge = 1,
 			damage = 15, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.0,
@@ -212,6 +215,7 @@ class Game():
 			size = 45, 
 			speed = 10, 
 			bulletlifetime = 0.3, 
+			charge = 1,
 			damage = 2, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.1,
@@ -228,6 +232,7 @@ class Game():
 			size = 150,
 			speed = 15, 
 			bulletlifetime = 4, 
+			charge = 1,
 			damage = 1.25, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.3,
@@ -244,6 +249,7 @@ class Game():
 			size = 15, 
 			speed = 40, 
 			bulletlifetime = 0.01, 
+			charge = 1,
 			damage = 1, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.0,
@@ -260,6 +266,7 @@ class Game():
 			size = 50, 
 			speed = 20, 
 			bulletlifetime = 10, 
+			charge = 1,
 			damage = 10, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.7,
@@ -276,6 +283,7 @@ class Game():
 			size = 20, 
 			speed = 20, 
 			bulletlifetime = 0.35, 
+			charge = 1,
 			damage = 6, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.0,
@@ -292,6 +300,7 @@ class Game():
 			size = 30, 
 			speed = 10, 
 			bulletlifetime = 3.25, 
+			charge = 1,
 			damage = 20, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.0,
@@ -308,6 +317,7 @@ class Game():
 			size = 5, 
 			speed = 10, 
 			bulletlifetime = 0.05, 
+			charge = 1,
 			damage = 6, 
 			position = pygame.Vector2(self.player.position.x, self.player.position.y),
 			slow = 0.1,
@@ -964,8 +974,14 @@ class Game():
 					if "angled" in weapon.pattern:
 						b.addAnimationRotation(0)
 						b.addRotation(weapon.rotation)
-					if ("multiple" in weapon.pattern or "constant" in weapon.pattern) and random.random() > 0.975 - weapon.level * 0.065:
-						weapon.cooldown_current = 0.02
+					for c in range(weapon.charge_max - 1):
+						if random.random() > 0.975 - weapon.level * 0.065:
+							weapon.cooldown_current = 0.02
+							weapon.charge_current -= 1
+						if  weapon.charge_current == 0:
+							weapon.charge_current = weapon.charge_max
+							weapon.cooldown_current = weapon.cooldown_max
+
 					weapon.bullets.add(b)
 					self.bulletGroup.add(b)
 			else:

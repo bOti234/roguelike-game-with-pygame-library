@@ -189,6 +189,12 @@ Github repository for the second assignment of Programming II.
 
 -Added option to upgrade a passive multiple times with a single function.
 
+### Update v1.2.3
+
+-Added some temporary images for two weapons that will be developed later.
+
+-Changed the quickly repeated shots feature in game, now it will be easier to work with and can be used for different types of weapons as well.
+
 ## TODO list:
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
@@ -222,6 +228,8 @@ Github repository for the second assignment of Programming II.
 -Cleaning up the code by removing any unnececary lines and making it more efficient.
 
 -Adding an arrow that points towards the nearest weaponkit.
+
+-Adding a piercing attribute to bullets. A bullet can pass through a number of enemies equal to the bullets piercing attribute.
 
 -Implementing that a maximum of 5 weapons can be equipped by the player.
 
