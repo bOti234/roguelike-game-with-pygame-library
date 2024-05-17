@@ -195,6 +195,28 @@ Github repository for the second assignment of Programming II.
 
 -Changed the quickly repeated shots feature in game, now it will be easier to work with and can be used for different types of weapons as well.
 
+### Update v1.2.4
+
+-Fixed the issue when the pause menu or any selector menus were opened, the game's clock was still ticking.
+
+-Fixed the issue when a key from awsd is still pressed down when the selector menu opens, after the user chooses an option, the player character teleports based on the pressed button.
+
+-Fixed the hitbox of energy orb and cluster bombs.
+
+-Reduced the game speed.
+
+-Added main menu with temporary buttons. Game is not reset when leaving and re-entering the game. It might become a permanent feature.
+
+-Added cooldown to energy orb. This will make it able to crit.
+
+-Added pierce to weapon attributes. A bullet can pass through a number of enemies equal to the bullets piercing attribute.
+
+-Added arrows that point to the items on the map. Each type of item has a different coloured arrow.
+
+-Moved the attributes' data for the weapon and passive class instances to csv files.
+
+-Changed the weapon and passive class instance creation so that it loads the data from the csv file. This makes the code shorter and more organized. 
+
 ## TODO list:
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
@@ -209,8 +231,6 @@ Github repository for the second assignment of Programming II.
 
 -Fixing balance of rifle and orb.
 
--Fixing the hitbox of orb and cluster bombs.
-
 -Fixing the balance with crowd control.
 
 -Fixing descriptions of passives and weapons.
@@ -221,15 +241,9 @@ Github repository for the second assignment of Programming II.
 
 -Creating all talent images. Implementing all talents.
 
--Fixing the issue when a key from awsd is still pressed down when the selector menu opens, after the user chooses an option, the player character teleports based on the pressed button.
-
 -Adding in background elements (e.g. stones, trees, a pond where the player can't go, etc.)
 
 -Cleaning up the code by removing any unnececary lines and making it more efficient.
-
--Adding an arrow that points towards the nearest weaponkit.
-
--Adding a piercing attribute to bullets. A bullet can pass through a number of enemies equal to the bullets piercing attribute.
 
 -Implementing that a maximum of 5 weapons can be equipped by the player.
 

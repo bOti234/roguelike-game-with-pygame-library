@@ -10,13 +10,10 @@ class GameObject(pygame.sprite.Sprite):
 		self.position: pygame.Vector2 = position
 		self.width = width
 		self.height = height
-		if self.objtype in ["enemy", "player", "experience"] or ("bullet" in self.objtype and (self.weaponname == "Damaging Field" or "Scatter" in self.weaponname)):
+		if self.objtype in ["enemy", "player", "experience"] or ("bullet" in self.objtype and (self.weaponname == "Energy Orb" or self.weaponname == "Damaging Field" or "Scatter" in self.weaponname)):
 			self.radius = self.width / 2
 			if self.objtype == "enemy":
-				print(self.position.x)
 				self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
-				print(self.rect.x)
-				print("\n")
 			else:
 				self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
 		else:
@@ -56,7 +53,7 @@ class GameObject(pygame.sprite.Sprite):
 			if keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
 				self.position.y -= speed * rate * ( dt / 2**(1/2) -  dt)
 				self.position.x -= speed * rate * ( dt / 2**(1/2) -  dt)
-		if self.objtype in ["enemy", "experience"]:
+		if self.objtype in ["enemy", "experience"] or (self.objtype == "bullet" and self.weaponname == "Energy Orb"):
 			self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
 		else:
 			self.rect = pygame.Rect(self.position.x, self.position.y, self.width, self.height)
@@ -126,13 +123,16 @@ class PlayerCharacter(GameObject):
 		return n
 
 class Passive():
-	def __init__(self, name, value, cooldown, count = 0):
+	def __init__(self, name, value, cooldown):
 		self.name = name
 		self.level = 0
 		self.value = value
 		self.cooldown_max = cooldown
 		self.cooldown_current = 0
-		self.count = count
+		if self.name == "Gunslinger":
+			self.count = 1
+		else:
+			self.count = 0
 		self.description = self.getDescription()
 
 		self.loadImages()
@@ -140,9 +140,9 @@ class Passive():
 	def loadImages(self):
 		if pygame.get_init():
 			dirname = os.path.dirname(__file__)
-			filename_weapon = os.path.join(dirname, '../../media/images/passives/')
-			self.image_base = pygame.image.load(filename_weapon + "/"+str(self.name)+"_1.jpg").convert_alpha()
-			self.image_maxed = pygame.image.load(filename_weapon + "/"+str(self.name)+"_2.jpg").convert_alpha()
+			filepath_pasive = os.path.join(dirname, '../../media/images/passives/')
+			self.image_base = pygame.image.load(filepath_pasive + "/"+str(self.name)+"_1.jpg").convert_alpha()
+			self.image_maxed = pygame.image.load(filepath_pasive + "/"+str(self.name)+"_2.jpg").convert_alpha()
 	
 	def updateCooldown(self, dt):
 		if self.cooldown_current > 0:
@@ -220,7 +220,7 @@ class Passive():
 		return eval(cont[self.name])
 	
 class Bullet(GameObject):
-	def __init__(self, weaponnanme: str, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, crit: bool, objtype: str, width_and_height: int):
+	def __init__(self, weaponnanme: str, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, pierce: int, crit: bool, objtype: str, width_and_height: int):
 		self.weaponname = weaponnanme
 		super().__init__(objtype, position, width_and_height, width_and_height)
 		#self.position = position
@@ -228,6 +228,7 @@ class Bullet(GameObject):
 		self.position_destination = position_destination
 		self.lifeTime: float = lifetime
 		self.damage: float = damage
+		self.pierce: int = pierce
 		self.crit: bool = crit
 
 		self.enemiesHit: List[Enemy] = []
@@ -239,7 +240,7 @@ class Bullet(GameObject):
 		self.animation_rotation = rotation
 
 class Weapon(GameObject):
-	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], charge: int, damage: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
+	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], charge: int, damage: float, pierce: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
 		objtype = "weapon"
 		self.pattern: str = pattern
 		self.name: str = name
@@ -292,7 +293,8 @@ class Weapon(GameObject):
 		self.bulletLifeTime: float = bulletlifetime
 		self.charge_max: int = charge
 		self.charge_current: int = charge
-		self.damage = damage
+		self.damage: float = damage
+		self.pierce: int = pierce
 		self.bullets: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
 		self.position_original = pygame.Vector2(position.x, position.y)
 		self.position_destination = pygame.Vector2(0,0)
@@ -301,7 +303,7 @@ class Weapon(GameObject):
 
 		self.loadImages()
 	
-	def getDescription(self):
+	def getDescription(self):	#TODO: LOOK UP GINGA AND i18n!!!!!!!!!!!!!!!
 		dirname = os.path.dirname(__file__)
 		filename_desc = os.path.join(dirname, '../../media/descriptions/weapons.txt')
 		with open(filename_desc, "r") as f:
@@ -347,11 +349,13 @@ class Weapon(GameObject):
 					
 					if self.name == "High-tech Rifle":
 						self.cooldown_max -= 0.1 * (5 - self.level)
+						self.pierce += 1
 						if self.level >= 3:
 							self.charge_max += 1
 						if self.level == 5:
 							self.damage += 15
 							self.speed -= 3
+							self.pierce += 1
 					
 					if self.name == "Flamethrower":
 						self.cooldown_max -= 0.075
@@ -359,8 +363,12 @@ class Weapon(GameObject):
 						self.size += 1
 						self.damage -= 9
 						self.bulletLifeTime -= 0.004 * self.level
+						if self.level > 2:
+							self.pierce += 1
 						if self.level == 5:
-							self.bulletLifeTime -= 0.02
+							self.bulletLifeTime -= 0.01
+							self.cooldown_max += 0.045
+							self.pierce -= 1
 
 					if self.name == "Damaging Field":
 						self.status_effects["slow"] += 0.1
@@ -377,6 +385,7 @@ class Weapon(GameObject):
 						if self.level >= 4:
 							self.charge_max += 1
 							self.damage += 1
+							self.pierce += 1
 					
 					if "cluster" in self.pattern:
 						self.cooldown_max -= 0.25
@@ -393,29 +402,37 @@ class Weapon(GameObject):
 						self.bulletLifeTime += 0.05
 						self.size += 5
 						self.damage += 10
+						self.pierce += 1
 						self.projectile_damage += 7
 						self.projectile_count += 2
 						self.projectile_range += 50
 						self.projectile_size += 5
 					
-					if "circle" in self.pattern:
+					if self.name == "Energy Orb":
 						self.speed *= 1.1
 						self.size += 5
 						self.distance += 50
+						self.cooldown_max -= 0.75
+						self.pierce += 2
+						self.bulletLifeTime += 2.75
+						if self.level == 5:
+							self.bulletLifeTime += 5
 					
-					if "angled" in self.pattern:
+					if self.name == "Boomerang":
 						self.cooldown_max -= 0.425
 						self.damage += 10
 						self.size += 3
 						self.speed += 2
+						self.pierce += 2
 						if self.level >= 4:
 							self.size += 2
 							self.speed += 1
 						if self.level == 5:
 							self.damage += 5
 					
-					if "pet" in self.pattern:
+					if self.name == "Attack Drone":
 						self.damage += 0.2 * self.level
+						self.pierce += 1
 						self.range += 50
 						self.speed += 10
 						self.size += 2.5
@@ -437,7 +454,7 @@ class Weapon(GameObject):
 			angle = 360 / r
 			destination = pygame.Vector2(bullet.position.x + self.projectile_range * math.cos(i * angle * math.pi / 180), bullet.position.y + self.projectile_range * math.sin(i * angle * math.pi / 180))
 			position = pygame.Vector2(bullet.position.x, bullet.position.y)
-			b.append(Bullet("Cluster Bombs", position, position, destination, 8 + (self.level - 1), self.projectile_damage, False, "bullet mine", self.projectile_size))
+			b.append(Bullet("Cluster Bombs", position, position, destination, 8 + (self.level - 1), self.projectile_damage, self.pierce, False, "bullet mine", self.projectile_size))
 		return b
 	
 	def getScatters(self, bullet: Bullet):
@@ -447,7 +464,7 @@ class Weapon(GameObject):
 			angle = 360 / r
 			destination = pygame.Vector2(bullet.position.x + self.projectile_range * math.cos(i * angle * math.pi / 180), bullet.position.y + self.projectile_range * math.sin(i * angle * math.pi / 180))
 			position = pygame.Vector2(bullet.position.x, bullet.position.y)
-			b.append(Bullet("Scatter Rifle", position, position, destination, 1.2, self.projectile_damage, False, "bullet scatter", self.projectile_size))
+			b.append(Bullet("Scatter Rifle", position, position, destination, 1.2, self.projectile_damage, self.pierce - 1,False, "bullet scatter", self.projectile_size))
 		return b
 
 class Enemy(GameObject):
@@ -513,17 +530,20 @@ class Item(GameObject):
 class WeaponKit(Item):
 	def __init__(self, position, width = 50, height = 50):
 		objtype = "weaponkit"
+		self.colour = "gray"
 		super().__init__(objtype, position, width, height)
 
 class HealthKit(Item):
 	def __init__(self, position, width = 30, height = 30):
 		objtype = "healthkit"
+		self.colour = "green"
 		self.lifetime = 30
 		super().__init__(objtype, position, width, height)
 
 class Magnet(Item):
-	def __init__(self, randpos, width, height):
+	def __init__(self, randpos, width = 50, height = 50):
 		objtype = "magnet"
+		self.colour = "red"
 		super().__init__(objtype, randpos, width, height)
 
 class HUD(GameObject):
@@ -541,8 +561,41 @@ class Menu(HUD):
 		self.opened = False
 		self.state = None
 
+	def openMainMenu(self, screen, screen_width: int, screen_height: int):
+		if pygame.get_init():
+			dirname = os.path.dirname(__file__)
+			filename = os.path.join(dirname, '../../media/images/buttons/')
+			resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
+			quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
 
-	def openInGameMenu(self, screen, screen_width: int, screen_height: int, paused):
+			#create button instances
+			resume_button = Button(screen_width/2 - resume_img.get_width()/2, screen_height/4 + 125, resume_img, 1)
+			quit_button = Button(screen_width/2 - quit_img.get_width()/2, screen_height/4 + 375, quit_img, 1)
+
+			#game loop
+			run = True
+			while run:
+				screen.fill("black")
+				window = pygame.Rect(screen_width/4, screen_height/4, screen_width/2, screen_height/2)
+				pygame.draw.rect(screen, (52, 78, 91), window)
+
+				#check menu state
+				if self.state == "inMainMmenu":
+					#draw pause screen buttons
+					if resume_button.draw(screen):
+						return "start game"
+					if quit_button.draw(screen):
+						run = False
+						return "exit"
+
+				#event handler
+				for event in pygame.event.get():
+					if event.type == pygame.QUIT:
+						run = False
+
+				pygame.display.update()
+
+	def openInGameMenu(self, screen, screen_width: int, screen_height: int):
 		if pygame.get_init():
 
 			dirname = os.path.dirname(__file__)
@@ -570,30 +623,27 @@ class Menu(HUD):
 				window = pygame.Rect(screen_width/4, screen_height/4, screen_width/2, screen_height/2)
 				pygame.draw.rect(screen, (52, 78, 91), window)
 
-				#check if game is paused
-				if paused == True:
-					#check menu state
-					if self.state == "ingame":
-						#draw pause screen buttons
-						if resume_button.draw(screen):
-							paused = False
-							return "closed"
-						if options_button.draw(screen):
-							self.state = "options"
-						if quit_button.draw(screen):
-							run = False
-							pygame.quit()
-					#check if the options menu is open
-					if self.state == "options":
-						#draw the different options buttons
-						if video_button.draw(screen):
-							print("Video Settings")
-						if audio_button.draw(screen):
-							print("Audio Settings")
-						if keys_button.draw(screen):
-							print("Change Key Bindings")
-						if back_button.draw(screen):
-							self.state = "ingame"
+				#check menu state
+				if self.state == "ingame":
+					#draw pause screen buttons
+					if resume_button.draw(screen):
+						return "closed"
+					if options_button.draw(screen):
+						self.state = "options"
+					if quit_button.draw(screen):
+						run = False
+						return "return to main menu"
+				#check if the options menu is open
+				if self.state == "options":
+					#draw the different options buttons
+					if video_button.draw(screen):
+						print("Video Settings")
+					if audio_button.draw(screen):
+						print("Audio Settings")
+					if keys_button.draw(screen):
+						print("Change Key Bindings")
+					if back_button.draw(screen):
+						self.state = "ingame"
 
 				#event handler
 				for event in pygame.event.get():
@@ -602,7 +652,7 @@ class Menu(HUD):
 
 				pygame.display.update()
 
-	def openItemSelectorMenu(self, screen: pygame.Surface, screen_width: int, screen_height: int, paused: bool, itemlist: List[Union[Weapon, Passive]]):
+	def openItemSelectorMenu(self, screen: pygame.Surface, screen_width: int, screen_height: int, itemlist: List[Union[Weapon, Passive]]):
 		if pygame.get_init():
 			# Load button images for menu buttons selection
 			for item in itemlist:
@@ -654,23 +704,18 @@ class Menu(HUD):
 				window = pygame.Rect(screen_width / 4 - 200, screen_height / 4, screen_width / 2 + 400, screen_height / 2)
 				pygame.draw.rect(screen, (52, 78, 91), window)
 
-				# Check if game is paused
-				if paused:
-					# Check menu state
-					if self.state == "weapon_selector" or self.state == "passive_selector":
-						# Draw item selection buttons
-						if len(itemlist) > 0:
-							if item_button1.draw(screen) or text_button1.drawText(screen):
-								paused = False
-								return ["closed", itemlist[0]]
-						if len(itemlist) > 1:
-							if item_button2.draw(screen) or text_button2.drawText(screen):
-								paused = False
-								return ["closed", itemlist[1]]
-						if len(itemlist) > 2:
-							if item_button3.draw(screen) or text_button3.drawText(screen):
-								paused = False
-								return ["closed", itemlist[2]]
+				# Check menu state
+				if self.state == "weapon_selector" or self.state == "passive_selector":
+					# Draw item selection buttons
+					if len(itemlist) > 0:
+						if item_button1.draw(screen) or text_button1.drawText(screen):
+							return ["closed", itemlist[0]]
+					if len(itemlist) > 1:
+						if item_button2.draw(screen) or text_button2.drawText(screen):
+							return ["closed", itemlist[1]]
+					if len(itemlist) > 2:
+						if item_button3.draw(screen) or text_button3.drawText(screen):
+							return ["closed", itemlist[2]]
 
 				# Event handler
 				for event in pygame.event.get():
@@ -693,6 +738,7 @@ class Button():
 			self.rect = self.image.get_rect()
 		self.rect.topleft = (x, y)
 		self.clicked = False
+		self.timeout = 5
 	
 	def draw(self, surface):
 		action = False
@@ -700,13 +746,18 @@ class Button():
 		pos = pygame.mouse.get_pos()
 
 		#check mouseover and clicked conditions
-		if self.rect.collidepoint(pos):
-			if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
-				self.clicked = True
-				action = True
+		if self.timeout == 0:
+			if self.rect.collidepoint(pos):
+				if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+					self.clicked = True
+					action = True
 
-		if pygame.mouse.get_pressed()[0] == 0:
-			self.clicked = False
+			if pygame.mouse.get_pressed()[0] == 0:
+				self.clicked = False
+
+		else:
+			if pygame.mouse.get_pressed()[0] == 0:
+				self.timeout -= 1
 
 		#draw button on screen
 		surface.blit(self.image, (self.rect.x, self.rect.y))
