@@ -217,6 +217,18 @@ Github repository for the second assignment of Programming II.
 
 -Changed the weapon and passive class instance creation so that it loads the data from the csv file. This makes the code shorter and more organized. 
 
+### Update v1.3.0
+
+-Created Django server and database, now it starts the server and fetches the scoreboard when starting the game.
+
+-Added basic Django tables in to the database, I'll use Django's user authenticator function to create/fetch/update/delete user profiles.
+
+-Added temporary/basic functions to the server and database, the file/directory names and the code for these will likely be changed/remade. These are partly for me learning Django.
+
+-Renamed some of the directory names for better consistency.
+
+-Changed the menu button designs, also made them easily editable for creating buttons later on in the project.
+
 ## TODO list:
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
