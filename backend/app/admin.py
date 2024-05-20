@@ -1,5 +1,5 @@
 # backend/admin.py
 from django.contrib import admin
-from .models import UserProfile
+from .models import Users
 
-admin.site.register(UserProfile)
+admin.site.register(Users)

@@ -20,15 +20,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'app',  # Your app name
+    'app',
 ]
 
-AUTHENTICATION_BACKENDS = (
+AUTHENTICATION_BACKENDS = [
+    'app.userauthenticator.UserProfileBackend',
     'django.contrib.auth.backends.ModelBackend',
-)
-
+]
 # Since I have a custom user model, I will need this later:
-# AUTH_USER_MODEL = 'your_app.MyCustomUserModel'
+AUTH_USER_MODEL = 'app.Users'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -84,6 +84,16 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+# Password hashing (we don't want to show anyones passwords in the database, obviously)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.BCryptPasswordHasher',
+    'django.contrib.auth.hashers.UnsaltedMD5PasswordHasher',
 ]
 
 # Internationalization

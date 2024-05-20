@@ -2,6 +2,7 @@ from typing import List, Dict, Union
 import pygame
 import os
 import math
+from ..utils.database import fetch_user, submit_new_user
 
 class GameObject(pygame.sprite.Sprite):
 	def __init__(self, objtype: str, position, width: int, height: int):
@@ -140,7 +141,7 @@ class Passive():
 	def loadImages(self):
 		if pygame.get_init():
 			dirname = os.path.dirname(__file__)
-			filepath_pasive = os.path.join(dirname, '../../media/images/passives/')
+			filepath_pasive = os.path.join(dirname, '../../assets/images/passives/')
 			self.image_base = pygame.image.load(filepath_pasive + "/"+str(self.name)+"_1.jpg").convert_alpha()
 			self.image_maxed = pygame.image.load(filepath_pasive + "/"+str(self.name)+"_2.jpg").convert_alpha()
 	
@@ -213,7 +214,7 @@ class Passive():
 
 	def getDescription(self):
 		dirname = os.path.dirname(__file__)
-		filename_passive = os.path.join(dirname, '../../media/descriptions/passives.txt')
+		filename_passive = os.path.join(dirname, '../../assets/descriptions/passives.txt')
 		with open(filename_passive, "r") as f:
 			cont = {}
 			[cont.update(eval(line)) for line in f.readlines()]
@@ -305,7 +306,7 @@ class Weapon(GameObject):
 	
 	def getDescription(self):	#TODO: LOOK UP GINGA AND i18n!!!!!!!!!!!!!!!
 		dirname = os.path.dirname(__file__)
-		filename_desc = os.path.join(dirname, '../../media/descriptions/weapons.txt')
+		filename_desc = os.path.join(dirname, '../../assets/descriptions/weapons.txt')
 		with open(filename_desc, "r") as f:
 			cont = {}
 			[cont.update(eval(line)) for line in f.readlines()]
@@ -314,11 +315,11 @@ class Weapon(GameObject):
 	def loadImages(self):
 		if pygame.get_init():
 			dirname = os.path.dirname(__file__)
-			filename_weapon = os.path.join(dirname, '../../media/images/weapons/')
+			filename_weapon = os.path.join(dirname, '../../assets/images/weapons/')
 			self.image_base = pygame.image.load(filename_weapon + "/"+str(self.name)+"_1.jpg").convert_alpha()
 			self.image_maxed = pygame.image.load(filename_weapon + "/"+str(self.name)+"_2.jpg").convert_alpha()
 			if self.name == "Flamethrower":
-				filename_projectile = os.path.join(dirname, '../../media/images/projectiles/')
+				filename_projectile = os.path.join(dirname, '../../assets/images/projectiles/')
 				self.image_projectile = pygame.image.load(filename_projectile + "/"+str(self.name)+"_projectile.png").convert_alpha()
 			else:
 				self.image_projectile = None
@@ -561,27 +562,39 @@ class Menu(HUD):
 		self.opened = False
 		self.state = None
 
-	def openMainMenu(self, screen, screen_width: int, screen_height: int):
+	def openMainMenu(self, screen, screen_width: int, screen_height: int, userdata = None):
 		if pygame.get_init():
 			dirname = os.path.dirname(__file__)
-			filename = os.path.join(dirname, '../../media/images/buttons/')
+			filename = os.path.join(dirname, '../../assets/images/buttons/')
 			resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
 			login_img = pygame.image.load(filename+"/button_login.png").convert_alpha()
+			create_img = pygame.image.load(filename+"/button_createuser.png").convert_alpha()
 			quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
 
 			back_img = pygame.image.load(filename+"/button_back.png").convert_alpha()
 
 			#create button instances
 			scale = 0.2
-			resume_button = Button(screen_width/2 - resume_img.get_width()/2 * scale, screen_height/4 + 125, resume_img, scale)
-			login_button = Button(screen_width/2 - login_img.get_width()/2 * scale, screen_height/4 + 250, login_img, scale)
-			quit_button = Button(screen_width/2 - quit_img.get_width()/2 * scale, screen_height/4 + 375, quit_img, scale)
+			font = pygame.font.Font(None, 30)
+			resume_button = Button(screen_width/2 - resume_img.get_width()/2 * scale, screen_height/4 + 50, resume_img, scale)
+			login_button = Button(screen_width/2 - login_img.get_width()/2 * scale, screen_height/4 + 175, login_img, scale)
+			create_button = Button(screen_width/2 - create_img.get_width()/2 * scale, screen_height/4 + 300, create_img, scale)
+			quit_button = Button(screen_width/2 - quit_img.get_width()/2 * scale, screen_height/4 + 425, quit_img, scale)
 
+			#userdata_textbutton = Button()
+
+			username_textbox = TextBox(screen_width/2 - 30 * font.size("_")[0]/2, screen_height/4 + 100, 30 * font.size("_")[0], font.get_linesize()*2, font, "username", "username...")
+			password_textbox = TextBox(screen_width/2 - 30 * font.size("_")[0]/2, screen_height/4 + 175, 30 * font.size("_")[0], font.get_linesize()*2, font, "password", "password...")
+			password2_textbox = TextBox(screen_width/2 - 30 * font.size("_")[0]/2, screen_height/4 + 250, 30 * font.size("_")[0], font.get_linesize()*2, font, "password", "password again...")
+			email_textbox = TextBox(screen_width/2 - 30 * font.size("_")[0]/2, screen_height/4 + 325, 30 * font.size("_")[0], font.get_linesize()*2, font, "email", "email address...")
 			back_button = Button(screen_width/2 - back_img.get_width()/2 * scale, screen_height/4 + 475, back_img, scale)
 
 			#game loop
 			run = True
+			button_timeout = 100
 			while run:
+				if button_timeout > 0:
+					button_timeout -= 1
 				screen.fill("black")
 				window = pygame.Rect(screen_width/4, screen_height/4, screen_width/2, screen_height/2)
 				pygame.draw.rect(screen, (52, 78, 91), window)
@@ -591,18 +604,69 @@ class Menu(HUD):
 					#draw pause screen buttons
 					if resume_button.draw(screen):
 						return "start game"
+					
 					if login_button.draw(screen):
+						login_button.rect.y = screen_height/4 + 400
 						self.state = "logInMenu"
+
+					if create_button.draw(screen):
+						create_button.rect.y = screen_height/4 + 400
+						self.state = "createMenu"
+
 					if quit_button.draw(screen):
-						run = False
-						return "exit"
+						if button_timeout <= 0:
+							run = False
+							return "exit"
 				
 				if self.state == "logInMenu":
+					username_textbox.draw(screen), password_textbox.draw(screen)
+
+					if login_button.draw(screen):
+						response = fetch_user(username_textbox.text, password_textbox.text)
+						if response["status"] == "error":
+							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
+							self.state == "logInMenu"
+							button_timeout = 100
+						else:
+							userdata = response["userdata"]
+							login_button.rect.y = screen_height/4 + 175
+							self.state = "inMainMenu"
+							button_timeout = 100
+
 					if back_button.draw(screen):
+						login_button.rect.y = screen_height/4 + 175
 						self.state = "inMainMenu"
+						button_timeout = 100
+
+				if self.state == "createMenu":
+					username_textbox.draw(screen), password_textbox.draw(screen), password2_textbox.draw(screen), email_textbox.draw(screen)
+
+					if create_button.draw(screen):
+						response = submit_new_user(username_textbox.text, password_textbox.text, password2_textbox.text, email_textbox.text, 0)
+						if response["status"] == "error":
+							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
+							self.state == "createMenu"
+							button_timeout = 100
+						else:
+							userdata = response["userdata"]
+							create_button.rect.y = screen_height/4 + 300
+							self.state = "inMainMenu"
+							button_timeout = 100
+
+					if back_button.draw(screen):
+						create_button.rect.y = screen_height/4 + 300
+						self.state = "inMainMenu"
+						button_timeout = 100
+
 
 				#event handler
 				for event in pygame.event.get():
+					if self.state == "logInMenu" or self.state == "createMenu":
+						username_textbox.handle_event(event)
+						password_textbox.handle_event(event)
+						if self.state == "createMenu":
+							password2_textbox.handle_event(event)
+							email_textbox.handle_event(event)
 					if event.type == pygame.QUIT:
 						run = False
 
@@ -612,7 +676,7 @@ class Menu(HUD):
 		if pygame.get_init():
 
 			dirname = os.path.dirname(__file__)
-			filename = os.path.join(dirname, '../../media/images/buttons/')
+			filename = os.path.join(dirname, '../../assets/images/buttons/')
 			resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
 			options_img = pygame.image.load(filename+"/button_options.png").convert_alpha()
 			quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
@@ -828,3 +892,82 @@ class Button():
 			self.clicked = False
 		
 		return action
+	
+
+class TextBox():
+	def __init__(self, x, y, width, height, font, texttype, placeholder_text, text_colour = (0, 0, 0), placeholder_colour = (150, 150, 150), active_colour = (255, 0, 0), bg_colour = (255, 255, 255)):
+		self.rect = pygame.Rect(x, y, width, height)
+		self.font: pygame.font.Font = font
+		self.type = texttype
+		self.placeholder_text = placeholder_text
+		self.text_colour = text_colour
+		self.placeholder_colour = placeholder_colour
+		self.active_colour = active_colour
+		self.bg_colour = bg_colour
+		self.text = ""
+		self.active = False
+		self.render_text = placeholder_text
+		self.cursor_show = False
+		self.cursor_timer = 500
+		self.hovered = False
+
+	def reset(self):
+		self.text = ""
+		self.active = False
+		self.cursor_show = False
+		self.cursor_timer = 500
+		self.hovered = False
+
+	def handle_event(self, event):
+		pos = pygame.mouse.get_pos()
+		if event.type == pygame.MOUSEBUTTONDOWN:
+			# If the user clicked on the text box rect
+			if self.rect.collidepoint(pos):
+				# Toggle the active variable
+				self.active = True
+			else:
+				self.active = False
+		
+		if event.type == pygame.KEYDOWN:
+			if self.active:
+				if event.key == pygame.K_RETURN:
+					print(self.text)	# TODO: REQUEST A LOG IN
+				elif event.key == pygame.K_BACKSPACE:
+					self.text = self.text[:-1]
+				else:
+					self.text += event.unicode
+		
+		self.render_text = self.text if self.text != "" else self.placeholder_text
+
+	def draw(self, surface: pygame.Surface):
+		# Draw the background
+		pygame.draw.rect(surface, self.bg_colour, self.rect)
+
+		# Draw the text
+		colour = self.placeholder_colour if self.text == "" else self.text_colour
+		if self.type == "password" and self.text != "":
+			final_text = ""
+			for i in range(len(self.render_text)):
+				final_text += "•"
+		else:
+			final_text = self.render_text
+		text_surface = self.font.render(final_text, True, colour)
+		surface.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
+
+		# Draw the border
+		if self.active:
+			pygame.draw.rect(surface, self.active_colour, self.rect, 3)
+			if self.cursor_show:
+				text_size = 6
+				if self.text != "":
+					for letter in final_text:
+						text_size += self.font.size(letter)[0]
+				pygame.draw.line(surface, (0,0,0), (self.rect.x + text_size, self.rect.y + 4), (self.rect.x + text_size, self.rect.y + self.rect.height - 20), 2)
+		else:
+			pygame.draw.rect(surface, (0, 0, 0), self.rect, 2)
+		
+		if self.cursor_timer <= 0:
+			self.cursor_show = not self.cursor_show
+			self.cursor_timer = 500
+		else:
+			self.cursor_timer -= 1

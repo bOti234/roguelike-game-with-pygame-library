@@ -10,7 +10,7 @@ from frontend.utils.database import fetch_scoreboard
 server_process = subprocess.Popen(['python', 'backend/run_server.py'])
 
 # Wait for the server to start up
-time.sleep(5)  # Adjust the sleep time as necessary
+time.sleep(3)  # Adjust the sleep time as necessary
 
 # Check if the server is up by sending a request
 try:

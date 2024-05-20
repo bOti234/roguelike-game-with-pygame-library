@@ -94,7 +94,7 @@ class Game():
 		#      cooldown = 0
 		# )
 		dirname = os.path.dirname(__file__)
-		filepath_pasive = os.path.join(dirname, "../../media/instances/")
+		filepath_pasive = os.path.join(dirname, "../../assets/instances/")
 		passivelist = []
 		table = pandas.DataFrame(pandas.read_csv(filepath_pasive+"/passives.csv"))
 		for i, row in table.iterrows():
@@ -108,7 +108,7 @@ class Game():
 
 	def getWeapons(self):
 		dirname = os.path.dirname(__file__)
-		filepath_weapon = os.path.join(dirname, "../../media/instances/")
+		filepath_weapon = os.path.join(dirname, "../../assets/instances/")
 		weaponlist = []
 		table = pandas.DataFrame(pandas.read_csv(filepath_weapon+"/weapons.csv"))
 		for i, row in table.iterrows():
@@ -140,6 +140,7 @@ class Game():
 			self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
 			pygame.display.set_caption("Epic roguelike game")
 			self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu()
 		menu.state = "inMainMenu"
 		response = menu.openMainMenu(self.screen, self.settings.screen_width, self.settings.screen_height)
@@ -150,6 +151,7 @@ class Game():
 			pygame.quit()
 
 	def openInGameMenu(self):
+		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu()
 		menu.state = "ingame"
 		response = menu.openInGameMenu(self.screen, self.settings.screen_width, self.settings.screen_height)
@@ -159,6 +161,7 @@ class Game():
 			self.openMainMenu()
 
 	def openSelectWeaponMenu(self):
+		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		weaponlist = self.getRandomWeapons()
 		if len(weaponlist) > 0:
 			menu = Menu()
@@ -181,6 +184,7 @@ class Game():
 		return upgradeableWeapons
 	
 	def openLevelUpMenu(self, n = 1):
+		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		for i in range(n):
 			passivelist = self.getRandomPasives()
 			if len(passivelist) > 0:
@@ -210,6 +214,7 @@ class Game():
 	
 	def gameRun(self):
 		#pygame.init()
+		pygame.mouse.set_cursor(pygame.cursors.broken_x)
 		self.getBackgroundImage()
 
 		clock = pygame.time.Clock()
@@ -259,7 +264,7 @@ class Game():
 
 			self.dt = clock.tick(self.settings.fps) / 1000 # self.dt is delta time in seconds since last frame
 			self.time += self.dt
-
+		
 		pygame.quit()
 
 	def drawPlayer(self):
@@ -271,7 +276,8 @@ class Game():
 			pygame.draw.circle(self.screen, "skyblue", (self.player.position.x, self.player.position.y), self.player.radius)
 
 		n = self.player.updateExperience()
-		self.openLevelUpMenu(n)
+		if n > 0:
+			self.openLevelUpMenu(n)
 			
 	
 	def drawStatBoxes(self):
@@ -299,7 +305,7 @@ class Game():
 	
 	def getBackgroundImage(self):
 		dirname = os.path.dirname(__file__)
-		filename_background = os.path.join(dirname, '../../media/images/background/')
+		filename_background = os.path.join(dirname, '../../assets/images/background/')
 		image = pygame.image.load(filename_background + "/background_image.png").convert_alpha()
 		self.backgroundimage = pygame.transform.scale(image, (int(image.get_rect().width * 3), int(image.get_rect().height * 3)))
 

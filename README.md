@@ -229,6 +229,20 @@ Github repository for the second assignment of Programming II.
 
 -Changed the menu button designs, also made them easily editable for creating buttons later on in the project.
 
+### Update v1.3.1
+
+-Changed the mouse cursor when the game runs and when a menu opens up.
+
+-Added create a user button to the assets and to the main menu.
+
+-Added custom users table to the database and to models.py. (not the default django table)
+
+-Added custom user authentication and form validation to views.py.
+
+-Finished the methods for creating a user profile and logging in a user profile.
+
+-Renamed some of the directories.
+
 ## TODO list:
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies

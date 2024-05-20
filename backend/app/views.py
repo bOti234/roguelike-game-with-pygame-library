@@ -1,52 +1,83 @@
+import json
+import hashlib
+from django import forms
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import redirect
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.views import View
-from .models import ScoreBoard
-import json
+from .models import ScoreBoard, Users
+from django.utils.decorators import method_decorator
 
 
+class CustomUserCreationForm(UserCreationForm):
+    class Meta:
+        model = Users
+        fields = ("player_name", "password1", "password2", "email")
+
+class CustomUserLoginForm(forms.Form):
+    player_name = forms.CharField(max_length=100)
+    password = forms.CharField(widget=forms.PasswordInput)
+
+@method_decorator(csrf_exempt, name='dispatch')
 class UserView(View):
-    @csrf_exempt
+
+    def post(self, request, *args, **kwargs):
+        if 'register' in request.path:
+            return self.register(request)
+        elif 'login' in request.path:
+            return self.login_view(request)
+        elif 'logout' in request.path:
+            return self.logout_view(request)
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+
     def register(self, request):
-        if request.method == 'POST':
-            form = UserCreationForm(request.POST)
-            if form.is_valid():
-                form.save()
-                username = form.cleaned_data.get('username')
-                password = form.cleaned_data.get('password1')
-                user = authenticate(username=username, password=password)
-                login(request, user)
-                return JsonResponse({'status': 'success', 'message': f'Account created for {username}!'})
+        data = json.loads(request.body)
+        form = CustomUserCreationForm(data)
+        print(data)
+        if form.is_valid():
+            form.save()
+            hashed_password = hashlib.md5(data["password1"].encode()).hexdigest()
+            user = authenticate(username = data["player_name"], password = hashed_password)
+            if user is not None:
+                new_user = Users(player_name = data["player_name"], password = hashed_password, email = data["email"], highscore = data["highscore"], is_active = True)
+                new_user.save()
+                login(request, new_user)
+                user_profile_data = {
+                    'player_name': new_user.player_name,
+                    'email': new_user.email,
+                    'highscore': new_user.highscore
+                }
+                return JsonResponse({'status': 'success', 'message': f'Account created for {data["player_name"]}!', "userdata": user_profile_data}, status = 201)
             else:
-                return JsonResponse({'status': 'error', 'errors': form.errors})
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+                return JsonResponse({'status': 'error', 'message': 'Invalid username, password or email.'}, status = 400)
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status = 400)
 
-    @csrf_exempt
     def login_view(self, request):
-        if request.method == 'POST':
-            form = AuthenticationForm(request, data=request.POST)
-            if form.is_valid():
-                username = form.cleaned_data.get('username')
-                password = form.cleaned_data.get('password')
-                user = authenticate(username=username, password=password)
-                if user is not None:
-                    login(request, user)
-                    return JsonResponse({'status': 'success', 'message': f'You are now logged in as {username}.'})
-                else:
-                    return JsonResponse({'status': 'error', 'message': 'Invalid username or password.'})
+        data = json.loads(request.body)
+        form = CustomUserLoginForm(data)
+        print(data)
+        if form.is_valid():
+            hashed_password = hashlib.md5(data["password"].encode()).hexdigest()
+            user = authenticate(username = data["player_name"], password = hashed_password)
+            if user is not None:
+                login(request, user)
+                user_profile_data = {
+                    'player_name': user.player_name,
+                    'email': user.email,
+                    'highscore': user.highscore
+                }
+                return JsonResponse({'status': 'success', 'message': f'You are now logged in as {data["player_name"]}!', "userdata": user_profile_data}, status = 201)
             else:
-                return JsonResponse({'status': 'error', 'errors': form.errors})
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+                return JsonResponse({'status': 'error', 'message': 'Invalid username or password.'}, status = 400)
+        else:
+            return JsonResponse({'status': 'error', 'errors': form.errors}, status = 400)
 
-    @csrf_exempt
     def logout_view(self, request):
-        if request.method == 'POST':
-            logout(request)
-            return JsonResponse({'status': 'success', 'message': 'You have successfully logged out.'})
-        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+        logout(request)
+        return JsonResponse({'status': 'success', 'message': 'You have successfully logged out.'})
 
 class ScoreBoardView(View):
 
