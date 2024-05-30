@@ -14,11 +14,13 @@ from ..utils.database import submit_score
 # submit_score('Player1', 5000)
 
 class Game():
-	def __init__(self):
+	def __init__(self, csrf_token):
 		self.difficultylist: List[str] = ["easy","normal","hard"]
 		self.speedlist: List[str] = ["slow","normal","fast"]
 		self.players: List[User] = []
 		self.scoreboard: List[int] = []
+
+		self.csrf_token = csrf_token
 	
 	def setSpeed(self, speed: str) -> int:
 		if speed in self.speedlist:
@@ -31,7 +33,7 @@ class Game():
 		else:
 			return 400
 	
-	def gameSetup(self, difficulty: str, speed: str, fps: int, screen_width: int, screen_height: int, game_size: int):
+	def gameStart(self, difficulty: str, speed: str, fps: int, screen_width: int, screen_height: int, game_size: int):
 		self.settings: GameSettings = GameSettings(
 			difficulty = difficulty, 
 			speed = self.setSpeed(speed), 
@@ -40,6 +42,7 @@ class Game():
 			screen_height = screen_height,
 			game_size = game_size
 			)
+		self.userdata = None
 		player_radius = 40 # With this only the map will be affected by game size                     #self.settings.game_size    # Bit unnecesary
 		player_position: pygame.Vector2 = pygame.Vector2(self.settings.screen_width / 2, self.settings.screen_height / 2)
 		self.player = PlayerCharacter(player_radius, player_position, 50, self.settings.speed)
@@ -74,6 +77,8 @@ class Game():
 		self.EnemyCooldown = 0
 
 		self.time = 0
+
+		self.openMainMenu()
 	
 	def getPassives(self):
 		# reach = Passive(   #TODO:
@@ -143,8 +148,9 @@ class Game():
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu()
 		menu.state = "inMainMenu"
-		response = menu.openMainMenu(self.screen, self.settings.screen_width, self.settings.screen_height)
+		response, userdata = menu.openMainMenu(self.screen, self.settings.screen_width, self.settings.screen_height, self.csrf_token, self.userdata)
 		if response == "start game":
+			self.userdata = userdata
 			self.gameRun()
 		elif response == "exit":
 			self.running = False

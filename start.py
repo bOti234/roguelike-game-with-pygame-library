@@ -2,9 +2,8 @@ import screeninfo
 import subprocess
 import time
 import requests
-from frontend.models.player import User
 from frontend.models.game import Game
-from frontend.utils.database import fetch_scoreboard
+from frontend.utils.database import fetch_scoreboard, get_csrf
 
 # Start Django server
 server_process = subprocess.Popen(['python', 'backend/run_server.py'])
@@ -14,8 +13,15 @@ time.sleep(3)  # Adjust the sleep time as necessary
 
 # Check if the server is up by sending a request
 try:
-    requests.get('http://localhost:8000/pygame/scoreboard/')
+    response = requests.get('http://localhost:8000/pygame/scoreboard/')
+    response.raise_for_status()
     print("Django server is running.")
+    
+    csrf_token = get_csrf()['csrf_token']
+    if csrf_token:
+        print(f'CSRF Token from cookies: {csrf_token}')
+    else:
+        print("No csrf token found in the cookies.")
 except requests.ConnectionError:
     print("Failed to connect to the Django server.")
     
@@ -23,9 +29,8 @@ except requests.ConnectionError:
 scoreboard = fetch_scoreboard()
 # print(high_scores)
 
-p1 = User("admin","12345")
-game1 = Game()
-game1.gameSetup(
+game1 = Game(csrf_token)
+game1.gameStart(
 	difficulty = "normal",
 	speed = "normal", 
 	fps = 60, 
@@ -33,7 +38,6 @@ game1.gameSetup(
 	screen_height = screeninfo.get_monitors()[0].height, 
 	game_size = 40
 	)
-game1.openMainMenu()
 
 # At the end of your script, make sure to terminate the server process
 print("Stopping Django server")

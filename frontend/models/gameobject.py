@@ -2,7 +2,7 @@ from typing import List, Dict, Union
 import pygame
 import os
 import math
-from ..utils.database import fetch_user, submit_new_user
+from ..utils.database import fetch_user, submit_new_user, submit_logout, submit_update_user
 
 class GameObject(pygame.sprite.Sprite):
 	def __init__(self, objtype: str, position, width: int, height: int):
@@ -562,26 +562,39 @@ class Menu(HUD):
 		self.opened = False
 		self.state = None
 
-	def openMainMenu(self, screen, screen_width: int, screen_height: int, userdata = None):
+	def openMainMenu(self, screen, screen_width: int, screen_height: int, csrf_token, userdata = None):
 		if pygame.get_init():
 			dirname = os.path.dirname(__file__)
 			filename = os.path.join(dirname, '../../assets/images/buttons/')
-			resume_img = pygame.image.load(filename+"/button_resume.png").convert_alpha()
-			login_img = pygame.image.load(filename+"/button_login.png").convert_alpha()
-			create_img = pygame.image.load(filename+"/button_createuser.png").convert_alpha()
+			play_img = pygame.image.load(filename+"/button_play.png").convert_alpha()
 			quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
-
 			back_img = pygame.image.load(filename+"/button_back.png").convert_alpha()
 
 			#create button instances
 			scale = 0.2
 			font = pygame.font.Font(None, 30)
-			resume_button = Button(screen_width/2 - resume_img.get_width()/2 * scale, screen_height/4 + 50, resume_img, scale)
-			login_button = Button(screen_width/2 - login_img.get_width()/2 * scale, screen_height/4 + 175, login_img, scale)
-			create_button = Button(screen_width/2 - create_img.get_width()/2 * scale, screen_height/4 + 300, create_img, scale)
-			quit_button = Button(screen_width/2 - quit_img.get_width()/2 * scale, screen_height/4 + 425, quit_img, scale)
+			menuX = screen_width/4
+			menuY = screen_height/5
+			
+			play_button = Button(screen_width/2 - play_img.get_width()/2 * scale, menuY + 175, play_img, scale)
+			quit_button = Button(screen_width/2 - quit_img.get_width()/2 * scale, menuY + 475, quit_img, scale)
 
-			#userdata_textbutton = Button()
+			if userdata:
+				logout_img = pygame.image.load(filename+"/button_logout.png").convert_alpha()
+				update_img = pygame.image.load(filename+"/button_updateuser.png").convert_alpha()
+
+				welocme_text_box = pygame.Rect(screen_width/2 - font.size("Welcome back, "+userdata["player_name"]+"!")[0]/2, menuY + 50, font.size("Welcome back, "+userdata["player_name"]+"!")[0], font.get_linesize()*2)
+				welocme_text_button = Button(welocme_text_box.x, welocme_text_box.y, [font, "Welcome back, "+userdata["player_name"]+"!", "white", welocme_text_box], 1)
+				log_button = Button(screen_width/2 - logout_img.get_width()/2 * scale, menuY + 275, logout_img, scale)
+				user_button = Button(screen_width/2 - update_img.get_width()/2 * scale, menuY + 375, update_img, scale)
+			else:
+				login_img = pygame.image.load(filename+"/button_login.png").convert_alpha()
+				create_img = pygame.image.load(filename+"/button_createuser.png").convert_alpha()
+
+				welocme_text_box = pygame.Rect(screen_width/2 - font.size("Play as guest!")[0]/2, menuY + 50, font.size("Play as guest!")[0], font.get_linesize()*2)
+				welocme_text_button = Button(welocme_text_box.x, welocme_text_box.y, [font, "Play as guest!", "white", welocme_text_box], 1)
+				log_button = Button(screen_width/2 - login_img.get_width()/2 * scale, menuY + 275, login_img, scale)
+				user_button = Button(screen_width/2 - create_img.get_width()/2 * scale, menuY + 375, create_img, scale)
 
 			username_textbox = TextBox(screen_width/2 - 30 * font.size("_")[0]/2, screen_height/4 + 100, 30 * font.size("_")[0], font.get_linesize()*2, font, "username", "username...")
 			password_textbox = TextBox(screen_width/2 - 30 * font.size("_")[0]/2, screen_height/4 + 175, 30 * font.size("_")[0], font.get_linesize()*2, font, "password", "password...")
@@ -591,86 +604,128 @@ class Menu(HUD):
 
 			#game loop
 			run = True
+			logchange = False
 			button_timeout = 100
 			while run:
 				if button_timeout > 0:
 					button_timeout -= 1
 				screen.fill("black")
-				window = pygame.Rect(screen_width/4, screen_height/4, screen_width/2, screen_height/2)
+				window = pygame.Rect(menuX, menuY, screen_width - 2*menuX, screen_height - 2*menuY)
 				pygame.draw.rect(screen, (52, 78, 91), window)
 
 				#check menu state
 				if self.state == "inMainMenu":
+					welocme_text_button.drawText(screen)
 					#draw pause screen buttons
-					if resume_button.draw(screen):
-						return "start game"
+					if play_button.draw(screen):
+						return ("start game", userdata)
 					
-					if login_button.draw(screen):
-						login_button.rect.y = screen_height/4 + 400
-						self.state = "logInMenu"
+					if log_button.draw(screen):
+						if userdata:
+							response = submit_logout(userdata['player_name'], csrf_token)
+							if response['status'] == 'success':
+								userdata = None
+								logchange = True
+								run = False
+						else:
+							log_button.rect.y = menuY + 400
+							self.state = "logInMenu"
 
-					if create_button.draw(screen):
-						create_button.rect.y = screen_height/4 + 400
-						self.state = "createMenu"
+					if user_button.draw(screen):
+						if userdata:
+							user_button.rect.y = menuY + 450
+							self.state = 'updateMenu'
+						else:
+							user_button.rect.y = menuY + 450
+							self.state = "createMenu"
 
 					if quit_button.draw(screen):
 						if button_timeout <= 0:
 							run = False
-							return "exit"
+							return ("exit", userdata)
 				
 				if self.state == "logInMenu":
 					username_textbox.draw(screen), password_textbox.draw(screen)
 
-					if login_button.draw(screen):
-						response = fetch_user(username_textbox.text, password_textbox.text)
+					if log_button.draw(screen):
+						response = fetch_user(username_textbox.text, password_textbox.text, csrf_token)
 						if response["status"] == "error":
 							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
 							self.state == "logInMenu"
 							button_timeout = 100
 						else:
 							userdata = response["userdata"]
-							login_button.rect.y = screen_height/4 + 175
+							print(userdata)
 							self.state = "inMainMenu"
-							button_timeout = 100
+							logchange = True
+							run = False
 
 					if back_button.draw(screen):
-						login_button.rect.y = screen_height/4 + 175
+						log_button.rect.y = menuY + 275
+						self.state = "inMainMenu"
+						button_timeout = 100
+
+				if self.state == "updateMenu":
+					username_textbox.draw(screen), password_textbox.draw(screen), email_textbox.draw(screen)
+
+					if user_button.draw(screen):
+						username = username_textbox.text if username_textbox.text != "" else userdata['player_name']
+						password = password_textbox.text if password_textbox.text != "" else userdata['password']
+						email = email_textbox.text if email_textbox.text != "" else userdata['email']
+						response = submit_update_user(userdata['player_name'], username, password, email, csrf_token)
+						if response["status"] == "error":
+							print(response['message'])
+							username_textbox.reset(), password_textbox.reset(), email_textbox.reset()
+							self.state == "updateMenu"
+							button_timeout = 100
+						else:
+							userdata = response["userdata"]
+							self.state = "inMainMenu"
+							logchange = True
+							run = False
+					
+					if back_button.draw(screen):
+						user_button.rect.y = menuY + 375
 						self.state = "inMainMenu"
 						button_timeout = 100
 
 				if self.state == "createMenu":
 					username_textbox.draw(screen), password_textbox.draw(screen), password2_textbox.draw(screen), email_textbox.draw(screen)
 
-					if create_button.draw(screen):
-						response = submit_new_user(username_textbox.text, password_textbox.text, password2_textbox.text, email_textbox.text, 0)
+					if user_button.draw(screen):
+						response = submit_new_user(username_textbox.text, password_textbox.text, password2_textbox.text, email_textbox.text, 0, csrf_token)
 						if response["status"] == "error":
 							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
 							self.state == "createMenu"
 							button_timeout = 100
 						else:
 							userdata = response["userdata"]
-							create_button.rect.y = screen_height/4 + 300
 							self.state = "inMainMenu"
-							button_timeout = 100
+							logchange = True
+							run = False
 
 					if back_button.draw(screen):
-						create_button.rect.y = screen_height/4 + 300
+						user_button.rect.y = menuY + 375
 						self.state = "inMainMenu"
 						button_timeout = 100
-
-
+				
 				#event handler
 				for event in pygame.event.get():
-					if self.state == "logInMenu" or self.state == "createMenu":
+					if self.state == "logInMenu" or self.state == "createMenu" or self.state == 'updateMenu':
 						username_textbox.handle_event(event)
 						password_textbox.handle_event(event)
-						if self.state == "createMenu":
-							password2_textbox.handle_event(event)
+						if self.state == "createMenu" or self.state == 'updateMenu':
 							email_textbox.handle_event(event)
+							if self.state == "createMenu":
+								password2_textbox.handle_event(event)
+							
 					if event.type == pygame.QUIT:
 						run = False
 
 				pygame.display.update()
+
+			if logchange:
+				return self.openMainMenu(screen, screen_width, screen_height, csrf_token, userdata)
 
 	def openInGameMenu(self, screen, screen_width: int, screen_height: int):
 		if pygame.get_init():
@@ -945,12 +1000,12 @@ class TextBox():
 
 		# Draw the text
 		colour = self.placeholder_colour if self.text == "" else self.text_colour
-		if self.type == "password" and self.text != "":
-			final_text = ""
-			for i in range(len(self.render_text)):
-				final_text += "•"
-		else:
-			final_text = self.render_text
+		# if self.type == "password" and self.text != "":
+		# 	final_text = ""
+		# 	for i in range(len(self.render_text)):
+		# 		final_text += "•"
+		# else:
+		final_text = self.render_text
 		text_surface = self.font.render(final_text, True, colour)
 		surface.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
 

@@ -243,6 +243,14 @@ Github repository for the second assignment of Programming II.
 
 -Renamed some of the directories.
 
+### Updata v1.3.2
+
+-Redid the backend, now every request works with the Users table in the database. (create user, login user logout user, update user)
+
+-Fixed the backend directory, now it's more organized.
+
+-Removed unnececary models, forms, views.
+
 ## TODO list:
 
 -Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
@@ -270,6 +278,8 @@ Github repository for the second assignment of Programming II.
 -Adding in background elements (e.g. stones, trees, a pond where the player can't go, etc.)
 
 -Cleaning up the code by removing any unnececary lines and making it more efficient.
+
+-Cleaning up settings.py
 
 -Implementing that a maximum of 5 weapons can be equipped by the player.
 
