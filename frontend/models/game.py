@@ -7,8 +7,9 @@ import pandas
 from typing import List, Dict, Union
 from .player import User
 from .gamesettings import GameSettings
-from .gameobject import PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet, HUD, Inventory, Menu
-from ..utils.database import submit_score
+from .gameobject import PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet
+from .hud import HUD, Inventory, Menu
+from ..utils.database import fetch_scoreboard
 
 # Example of submitting a new score
 # submit_score('Player1', 5000)
@@ -18,7 +19,9 @@ class Game():
 		self.difficultylist: List[str] = ["easy","normal","hard"]
 		self.speedlist: List[str] = ["slow","normal","fast"]
 		self.players: List[User] = []
-		self.scoreboard: List[int] = []
+
+		# Fetching high scores
+		self.scoreboard = fetch_scoreboard()
 
 		self.csrf_token = csrf_token
 	
@@ -33,16 +36,18 @@ class Game():
 		else:
 			return 400
 	
-	def gameStart(self, difficulty: str, speed: str, fps: int, screen_width: int, screen_height: int, game_size: int):
+	def gameStart(self, difficulty: str, speed: str, fps: int, screen_width: int, screen_height: int, userdata = None):
 		self.settings: GameSettings = GameSettings(
 			difficulty = difficulty, 
 			speed = self.setSpeed(speed), 
 			fps = fps, 
 			screen_width = screen_width, 
 			screen_height = screen_height,
-			game_size = game_size
+			game_size = 40
 			)
-		self.userdata = None
+		self.lastsecond = 0
+		self.gamescore = 0
+		self.userdata = userdata
 		player_radius = 40 # With this only the map will be affected by game size                     #self.settings.game_size    # Bit unnecesary
 		player_position: pygame.Vector2 = pygame.Vector2(self.settings.screen_width / 2, self.settings.screen_height / 2)
 		self.player = PlayerCharacter(player_radius, player_position, 50, self.settings.speed)
@@ -146,9 +151,9 @@ class Game():
 			pygame.display.set_caption("Epic roguelike game")
 			self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
-		menu = Menu()
+		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 		menu.state = "inMainMenu"
-		response, userdata = menu.openMainMenu(self.screen, self.settings.screen_width, self.settings.screen_height, self.csrf_token, self.userdata)
+		response, userdata = menu.openMainMenu(self.csrf_token, self.userdata)
 		if response == "start game":
 			self.userdata = userdata
 			self.gameRun()
@@ -158,21 +163,39 @@ class Game():
 
 	def openInGameMenu(self):
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
-		menu = Menu()
+		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 		menu.state = "ingame"
-		response = menu.openInGameMenu(self.screen, self.settings.screen_width, self.settings.screen_height)
+		response = menu.openInGameMenu()
 		if response == "closed":
 			self.gameRun()
 		elif response == "return to main menu":
 			self.openMainMenu()
+	
+	def openDeathMenu(self):
+		pygame.mouse.set_cursor(pygame.cursors.arrow)
+		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
+		menu.state = "playerdead"
+		response, userdata = menu.openDeathMenu(self.userdata, int(round(self.gamescore)), self.csrf_token)
+		if response == "exit":
+			self.running = False
+			pygame.quit()
+		elif response == "return to main menu":
+			self.gameStart(
+				self.settings.difficulty,
+				self.settings.speed,
+				self.settings.fps,
+				self.settings.screen_width,
+				self.settings.screen_height,
+				userdata
+			)
 
 	def openSelectWeaponMenu(self):
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		weaponlist = self.getRandomWeapons()
 		if len(weaponlist) > 0:
-			menu = Menu()
+			menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 			menu.state = "weapon_selector"
-			response, weapon = menu.openItemSelectorMenu(self.screen, self.settings.screen_width, self.settings.screen_height, weaponlist)
+			response, weapon = menu.openItemSelectorMenu(weaponlist)
 			if isinstance(weapon, Weapon):
 				self.writeOnScreen(weapon.name, 0, 200)
 				weapon.upgradeItem(self.player, 1)
@@ -194,9 +217,9 @@ class Game():
 		for i in range(n):
 			passivelist = self.getRandomPasives()
 			if len(passivelist) > 0:
-				menu = Menu()
+				menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 				menu.state = "passive_selector"
-				response = menu.openItemSelectorMenu(self.screen, self.settings.screen_width, self.settings.screen_height, passivelist)
+				response = menu.openItemSelectorMenu(passivelist)
 				if isinstance(response[1], Passive):
 					response[1].upgradeItem(self.player, 1)
 					if response[1] not in self.player_passives.values():
@@ -214,9 +237,7 @@ class Game():
 		if len(upgradeablePassives) >= 3:
 			return random.sample(upgradeablePassives, 3)
 		return upgradeablePassives
-	
-	def openDeathMenu(self):
-		pass
+
 	
 	def gameRun(self):
 		#pygame.init()
@@ -246,7 +267,10 @@ class Game():
 			
 			self.drawPlayer()
 
-			self.checkHitboxes()
+			message = self.checkHitboxes()
+			if message == 'game over':
+				self.openDeathMenu()
+				break
 
 			self.spawnWeaponKit()
 			self.spawnMagnet()
@@ -258,8 +282,9 @@ class Game():
 			self.updateExperiencePosition()
 
 			self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
-			self.writeOnScreen(str(round(self.time)//60)+":"+str(round(self.time - 60 * (self.time // 60))), self.settings.screen_width/2 - 13, 10)  # Write some stuff on the self.screen
+			self.writeOnScreen(str(round(self.time//60))+":"+str(round(self.time - 60 * (self.time // 60))), self.settings.screen_width/2 - 13, 10)  # Write some stuff on the self.screen
 			self.writeOnScreen(str(self.player.experience_current)+" / "+str(self.player.experience_max), 0, 200)  # Write some stuff on the self.screen
+			self.writeOnScreen(str(self.gamescore), self.settings.screen_width/2 - 13, 40)  # Write some stuff on the self.screen
 
 			self.drawStatBoxes()
 			
@@ -270,6 +295,11 @@ class Game():
 
 			self.dt = clock.tick(self.settings.fps) / 1000 # self.dt is delta time in seconds since last frame
 			self.time += self.dt
+			if self.lastsecond < round(self.time)//1:
+				self.updateGameScore('second passed')
+				self.lastsecond = round(self.time)//1
+			#if self.time / 60 < self.time // 60 + 0.05 and self.time / 60 > self.time // 60 - 0.05:
+
 		
 		pygame.quit()
 
@@ -385,6 +415,14 @@ class Game():
 			if self.running:
 				self.openInGameMenu()
 
+	def updateGameScore(self, event: str, obj: Union[Enemy, Experience] = None):
+		if event == 'enemy killed':
+			self.gamescore += 100 * obj.level
+		elif event == 'second passed':
+			self.gamescore += 10
+		elif event == 'exp picked up':
+			self.gamescore += 1 + obj.value//100
+
 	def checkHitboxes(self):
 		self.writeOnScreen(str(self.player.position.x)+" "+str(self.player.position.y), self.player.position.x, self.player.position.y)
 		for item in self.ItemGroup:
@@ -425,12 +463,16 @@ class Game():
 							self.player.buffs["barrier"] = 0
 							self.player.health_current -= remainder
 					if self.player.health_current <= 0:
-						self.openDeathMenu()
+						self.player.health_current = 0
+						return 'game over'
 		
 		for exp in self.experienceGroup:
 			if pygame.sprite.collide_circle(exp, self.player):
 				self.player.experience_queue += int(exp.value)
+				self.updateGameScore('exp picked up', exp)
 				exp.kill()
+		
+		return None
 
 	def damageEnemy(self, bullet: Bullet, enemy: Enemy):
 		weapon = self.player_weapons[bullet.weaponname]
@@ -473,6 +515,7 @@ class Game():
 			# if enemy in self.EnemyGroup:
 			self.spawnEnemyDrops(enemy)
 			enemy.kill()
+			self.updateGameScore(event = 'enemy killed', obj = enemy)
 			if bullet.weaponname == "Attack Drone":
 				bullet.kill()
 
@@ -605,7 +648,7 @@ class Game():
 				PlayerItemDistX = abs(item.position.x - self.player.position.x)
 				PlayerItemDistY = abs(item.position.y - self.player.position.y)
 				
-				PlayerArrowDistY = PlayerItemDistY * (self.settings.screen_width/2 / PlayerItemDistX)	#
+				PlayerArrowDistY = PlayerItemDistY * (self.settings.screen_width/2 / PlayerItemDistX)
 
 				if PlayerArrowDistY > self.settings.screen_height/2:
 					PlayerArrowDistX = PlayerItemDistX * (self.settings.screen_height/2 / PlayerItemDistY)

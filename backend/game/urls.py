@@ -8,6 +8,6 @@ urlpatterns = [
     path('update/', UserView.as_view(), name = 'update'),
     path('update_score/', ScoreboardView.as_view(), name='update_score'),
     path('scoreboard/', ScoreboardView.as_view(), name='scoreboard'),
-    path('submit-score/', ScoreboardView.as_view(), name='add_score'),
+    path('add_score/', ScoreboardView.as_view(), name='add_score'),
     path('gettoken/', get_csrf_token, name = 'gettoken')
 ]

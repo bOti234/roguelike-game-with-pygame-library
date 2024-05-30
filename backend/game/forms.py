@@ -7,7 +7,7 @@ class UserCreateForm(UserCreationForm):
 
     class Meta:
         model = Users
-        fields = ['player_name', 'password1', 'password2', 'email']
+        fields = ['player_name', 'password1', 'password2', 'email', 'highscore']
 
 class UserLoginForm(forms.Form):
     player_name = forms.CharField(max_length=100)
@@ -28,4 +28,4 @@ class UserUpdateForm(forms.Form):
 class ScoreForm(forms.ModelForm):
     class Meta:
         model = Scoreboard
-        fields = ['score']
+        fields = ['player_name', 'score']

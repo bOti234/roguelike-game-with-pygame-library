@@ -243,13 +243,25 @@ Github repository for the second assignment of Programming II.
 
 -Renamed some of the directories.
 
-### Updata v1.3.2
+### Update v1.3.2
+
+-Added logout and update user menu buttons.
 
 -Redid the backend, now every request works with the Users table in the database. (create user, login user logout user, update user)
 
 -Fixed the backend directory, now it's more organized.
 
 -Removed unnececary models, forms, views.
+
+### Update v1.3.3
+
+-Added death screen when player dies. The player can create an account or log in to save their score if the played as a guest.
+
+-Added score gain to the game. Currently score scales with time, defeated enemies and picked up experience.
+
+-Finished every request for working with the Scoreboard table in the database. (get scoreboard, add score, update score)
+
+-Moved the HUD class and its subclasses to hud.py for better organisation.
 
 ## TODO list:
 

@@ -5,7 +5,7 @@ def fetch_scoreboard():
 
 def submit_score(player_name, score, csrf_token):
     data = {"player_name": player_name, "score": score}
-    return post_score("submit-score/", data, csrf_token)
+    return post_score("update_score/", data, csrf_token)
 
 def submit_new_user(player_name, password1, password2, email, highscore, csrf_token):
     data = {"player_name": player_name, "password1": password1, "password2": password2, "email": email, "highscore": highscore}

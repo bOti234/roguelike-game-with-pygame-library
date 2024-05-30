@@ -34,6 +34,14 @@ class UserView(View):
                 "player_name": user.player_name,
                 "highscore": user.highscore
             }
+
+            scoredata = {
+                "player_name": user.player_name,
+                "score": user.highscore
+            }
+            score_form = ScoreForm(scoredata)
+            if score_form.is_valid():
+                score_form.save()
             return JsonResponse({'status': 'success', 'message': 'Registration successful', 'userdata': userdata}, status = 201)
         return JsonResponse({'status': 'error', 'message': 'Registration failed', 'errors': form.errors}, status=400)
 
@@ -54,10 +62,6 @@ class UserView(View):
                     'email': user.email,
                     "highscore": user.highscore
                 }
-                if request.user.is_authenticated:
-                    print("User is authenticated and in the session")
-                else:
-                    print("User is not in the session")
                 return JsonResponse({'status': 'success', 'message': 'Login successful', 'userdata': userdata}, status = 201)
         return JsonResponse({'status': 'error', 'message': 'Login failed', 'errors': form.errors}, status=400)
 
@@ -89,27 +93,35 @@ class UserView(View):
         return JsonResponse({'status': 'error', 'message': 'User not authenticated'}, status=400)
 
 class ScoreboardView(View):
+    def post(self, request, *args, **kwargs):
+        if 'add_score' in request.path:
+            return self.add_score(request)
+        elif 'update_score' in request.path:
+            return self.update_score(request)
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method.'})
+    
     def get(self, request):
         scores = Scoreboard.objects.all().order_by('-score')
         score_list = list(scores.values('player_name', 'score', 'date_achieved'))
         return JsonResponse({'status': 'success', 'message': 'Scoreboard returned', 'scoreboard': score_list})
     
     def update_score(self, request):
-        form = ScoreForm(request.POST)
+        data = json.loads(request.body)
+        score = Scoreboard.objects.get(player_name = data['player_name'])
+        form = ScoreForm(data, instance = score)
         if form.is_valid():
-            score = form.cleaned_data['score']
-            request.user.highscore = max(request.user.highscore, score)
-            request.user.save()
-            Scoreboard.objects.create(player_name=request.user.player_name, score=score)
+            score = form.save()
+            user = Users.objects.get(player_name = data['player_name'])
+            user.highscore = data['score']
+            user.save()
             return JsonResponse({'status': 'success', 'message': 'Score updated successfully'}, status = 201)
         return JsonResponse({'status': 'error', 'message': 'Score update failed', 'errors': form.errors}, status=400)
 
     def add_score(self, request):
-        form = ScoreForm(request.POST)
+        data = json.loads(request.body)
+        form = ScoreForm(data)
         if form.is_valid():
             score = form.save(commit=False)
-            score.player_name = request.user.player_name
-            score.save()
             return JsonResponse({'status': 'success', 'message': 'Score added successfully'}, status = 201)
         return JsonResponse({'status': 'error', 'message': 'Score addition failed', 'errors': form.errors}, status=400)
 
