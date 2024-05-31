@@ -8,7 +8,7 @@ from typing import List, Dict, Union
 from .player import User
 from .gamesettings import GameSettings
 from .gameobject import PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet
-from .hud import HUD, Inventory, Menu
+from .hud import HUD, StatBar, Inventory, Menu
 from ..utils.database import fetch_scoreboard
 
 # Example of submitting a new score
@@ -85,6 +85,37 @@ class Game():
 
 		self.openMainMenu()
 	
+	def getStatBars(self):
+		health_bar = StatBar(
+			self.screen, 
+			self.settings.screen_width, self.settings.screen_height, "healthbar",
+			self.player.position.x - self.player.radius, self.player.position.y + 55,
+			self.player.width, 10,
+			(225, 75, 75, 255/100 * 80), self.traspscreen_hud, 2, 20,
+			"green", "black"
+		)
+
+		barrier_bar = StatBar(
+			self.screen, 
+			self.settings.screen_width, self.settings.screen_height, "barrierbar",
+			self.player.position.x - self.player.radius, self.player.position.y + 45,
+			self.player.width , 10,
+			(125, 125, 175, 255/100 * 60), self.traspscreen_hud, 2, 20,
+			"blue", "black"
+		)
+
+		experience_bar = StatBar(
+			self.screen, 
+			self.settings.screen_width, self.settings.screen_height, "experiencebar",
+			0, self.settings.screen_height - 25,
+			self.settings.screen_width, 25,
+			(20, 20, 20, 255/100 * 40), self.traspscreen_hud, 4, 0,
+			"yellow", "black"
+		)
+
+		return [health_bar, barrier_bar, experience_bar]
+
+
 	def getPassives(self):
 		# reach = Passive(   #TODO:
 		#     name = "Increased Reach",
@@ -150,6 +181,9 @@ class Game():
 			self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
 			pygame.display.set_caption("Epic roguelike game")
 			self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+			self.traspscreen_hud = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+			self.statbarlist = self.getStatBars()
+
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 		menu.state = "inMainMenu"
@@ -197,7 +231,7 @@ class Game():
 			menu.state = "weapon_selector"
 			response, weapon = menu.openItemSelectorMenu(weaponlist)
 			if isinstance(weapon, Weapon):
-				self.writeOnScreen(weapon.name, 0, 200)
+				#self.writeOnScreen(weapon.name, 0, 200)
 				weapon.upgradeItem(self.player, 1)
 				if weapon not in self.player_weapons.values():
 					self.player_weapons.update({weapon.name : weapon})
@@ -278,13 +312,11 @@ class Game():
 
 			self.updateItemPosition()
 			self.updatePointingArrowPosition()
-			self.updateEnemyPosition()
 			self.updateExperiencePosition()
+			self.updateEnemyPosition()
 
-			self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
-			self.writeOnScreen(str(round(self.time//60))+":"+str(round(self.time - 60 * (self.time // 60))), self.settings.screen_width/2 - 13, 10)  # Write some stuff on the self.screen
-			self.writeOnScreen(str(self.player.experience_current)+" / "+str(self.player.experience_max), 0, 200)  # Write some stuff on the self.screen
-			self.writeOnScreen(str(self.gamescore), self.settings.screen_width/2 - 13, 40)  # Write some stuff on the self.screen
+			#self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
+			self.drawTimeAndScore()
 
 			self.drawStatBoxes()
 			
@@ -304,7 +336,7 @@ class Game():
 		pygame.quit()
 
 	def drawPlayer(self):
-		pygame.draw.rect(self.screen, "blue", self.player.rect)
+		#pygame.draw.rect(self.screen, "blue", self.player.rect)
 		if self.player.hitCooldown > 0:     # Draw player with diff colour based on if they were hit recently or not
 			self.player.hitCooldown -= self.dt
 			pygame.draw.circle(self.screen, "darkmagenta", (self.player.position.x, self.player.position.y), self.player.radius) 
@@ -315,29 +347,48 @@ class Game():
 		if n > 0:
 			self.openLevelUpMenu(n)
 			
+	def drawTimeAndScore(self):
+		# Draw time box:
+		font = pygame.font.Font(None, 30)
+		minutes = round(self.time//60)
+		seconds = round(self.time - 60 * (self.time // 60))
+		if seconds == 60:
+			seconds = 0
+			minutes += 1
+		time_text = str(minutes)+":"+str(seconds)
+		time_box = pygame.Rect(self.settings.screen_width/2 - font.size("999:99")[0]/2, 8, font.size("999:99")[0] + 10, font.get_linesize() + 5)
+		pygame.draw.rect(self.screen, "skyblue", time_box, 0, 15)
+		pygame.draw.rect(self.screen, "black", time_box, 3, 15)
+		self.writeOnScreen(time_text, time_box.x + (time_box.width - font.size(time_text)[0])/2, time_box.y + 5)
+		
+		# Draw Score box:
+		score_text = str(int(round(self.gamescore)))
+		score_box = pygame.Rect(self.settings.screen_width/2 - font.size("99999999")[0]/2, 40, font.size("99999999")[0] + 10, font.get_linesize() + 5)
+		pygame.draw.rect(self.screen, (10, 43, 57), score_box, 0, 15)
+		pygame.draw.rect(self.screen, "cyan", score_box, 3, 15)
+		self.writeOnScreen(score_text, score_box.x + (score_box.width - font.size(score_text)[0])/2, score_box.y + 5, (200, 255, 255))
 	
 	def drawStatBoxes(self):
-		hp_rect_border = pygame.Rect(self.player.position.x - self.player.radius, self.player.position.y + 55, self.player.width , 10)
-		hp_rect = pygame.Rect(self.player.position.x - self.player.radius + 4, self.player.position.y + 55 + 3, (self.player.width - 4) * self.player.health_current / self.player.health_max, 10 - 6)
-		hp_rect_missing = pygame.Rect(self.player.position.x + self.player.radius, self.player.position.y + 55 + 3, -(self.player.width - 4) * (1 - (self.player.health_current / self.player.health_max)), 10 - 6)
-		
-		if "Protective Barrier" in self.player_passives.keys(): # NOOO THIS IS AN ITERATION AS WELLLL
-			barrier = self.player_passives["Protective Barrier"]
-			barrier_rect = pygame.Rect(self.player.position.x - self.player.radius + 4, self.player.position.y + 55 + 3, (self.player.width - 4) * (barrier.value / self.player.health_max) * self.player.buffs["barrier"] / barrier.value, 10 - 6)
-		else:
-			barrier = False
-		
-		pygame.draw.rect(self.screen, "green", hp_rect, 0, 20)
-		if barrier != False:
-			pygame.draw.rect(self.screen, "blue", barrier_rect, 0, 20)
-		pygame.draw.rect(self.screen, "red", hp_rect_missing, 0, 20)
-		pygame.draw.rect(self.screen, "black", hp_rect_border, 3, 20)
-		self.writeOnScreen(str(self.player.health_max), hp_rect.x, hp_rect.y+10)
+		for bar in self.statbarlist:
+			if bar.stat_type == "barrierbar":
+				if "Protective Barrier" in self.player_passives.keys():
+					bar.drawTransparent()
+			else:
+				bar.drawTransparent()
+			self.screen.blit(self.traspscreen_hud, (0,0))
 
-		exp_rect_border = pygame.Rect(800, self.settings.screen_height - 100, self.settings.screen_width - 1600 , 25)
-		exp_rect = pygame.Rect(800 + 4, self.settings.screen_height - 100 + 4, (self.settings.screen_width - 1600 - 4) * self.player.experience_current / self.player.experience_max , 25 - 8)
-		pygame.draw.rect(self.screen, "yellow", exp_rect, 0, 20)
-		pygame.draw.rect(self.screen, "black", exp_rect_border, 4, 20)
+		for bar in self.statbarlist:
+			if bar.stat_type == "healthbar":
+				bar.draw((self.player.width - 4) * self.player.health_current / self.player.health_max)
+			elif bar.stat_type == "barrierbar":
+				if "Protective Barrier" in self.player_passives.keys(): # NOOO THIS IS AN ITERATION AS WELLLL
+					barrier = self.player_passives["Protective Barrier"]
+					bar.draw((self.player.width - 4) * self.player.buffs["barrier"] / barrier.value)
+			elif bar.stat_type == "experiencebar":
+				bar.draw((self.settings.screen_width) * self.player.experience_current / self.player.experience_max)
+				exp_progress_txt = str(self.player.experience_current)+" / "+str(self.player.experience_max)
+				font = pygame.font.Font(None, 30)
+				self.writeOnScreen(exp_progress_txt, self.settings.screen_width/2 - font.size(exp_progress_txt)[0]//2, self.settings.screen_height - 20, reactive = True)  # Write some stuff on the self.screen
 	
 	def getBackgroundImage(self):
 		dirname = os.path.dirname(__file__)
@@ -424,7 +475,7 @@ class Game():
 			self.gamescore += 1 + obj.value//100
 
 	def checkHitboxes(self):
-		self.writeOnScreen(str(self.player.position.x)+" "+str(self.player.position.y), self.player.position.x, self.player.position.y)
+		#self.writeOnScreen(str(self.player.position.x)+" "+str(self.player.position.y), self.player.position.x, self.player.position.y)
 		for item in self.ItemGroup:
 			if pygame.sprite.collide_rect(item, self.player):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
 				item.kill()
@@ -705,7 +756,7 @@ class Game():
 			if slowness != 1:
 				enemy.colour = (125, 0, 64)
 
-			pygame.draw.rect(self.screen, "blue", enemy.rect)		#Enemy hitbox
+			#pygame.draw.rect(self.screen, "blue", enemy.rect)		#Enemy hitbox
 			pygame.draw.circle(self.screen, enemy.colour, enemy.position, enemy.radius)
 			pygame.draw.circle(self.screen, "black", enemy.position, enemy.radius, 3)
 			#self.writeOnScreen(self.screen, str(enemy.position.x)+" "+str(enemy.position.y), enemy.position.x, enemy.position.y)
@@ -781,7 +832,7 @@ class Game():
 		return False
 
 	def attackCycle(self, mouse_pos: pygame.Vector2):
-		self.writeOnScreen(" ".join([key for key in self.player_weapons.keys()]))
+		#self.writeOnScreen(" ".join([key for key in self.player_weapons.keys()]))
 		for weapon in self.player_weapons.values():
 			if weapon.name == "Flamethrower" and weapon.image_projectile == None:
 				weapon.loadImages()
@@ -1125,7 +1176,7 @@ class Game():
 					bullet.position.y = self.player.position.y + weapon.distance * math.sin(bullet.rotation * math.pi / 180)
 					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
 
-					pygame.draw.rect(self.screen, "blue", bullet.rect)		#Bullet hitbox
+					#pygame.draw.rect(self.screen, "blue", bullet.rect)		#Bullet hitbox
 					pygame.draw.circle(self.screen, weapon.colour, (bullet.position.x, bullet.position.y), weapon.size)
 
 					if weapon.level >= 3:
@@ -1245,7 +1296,7 @@ class Game():
 				weapon.rotation += weapon.speed * 0.07
 	
 	def passiveCycle(self):
-		self.writeOnScreen(" ".join([":".join([name, str(passive.level)]) for name, passive in self.player_passives.items()]), 0 , 100)
+		#self.writeOnScreen(" ".join([":".join([name, str(passive.level)]) for name, passive in self.player_passives.items()]), 0 , 100)
 		for passive in self.player_passives.values():
 			if passive.name == "Gunslinger":
 				if passive.count > 0:
@@ -1325,11 +1376,26 @@ class Game():
 				else:
 					pygame.draw.polygon(self.traspscreen, (255,50,50,255/100*55), poslist, weapon.level + 1)
 
-	def writeOnScreen(self, txt, posX = 0, posY = 0):
-		font = pygame.font.Font(None, 30)
-		# Kinda consol log -> Write stuff on the canvas
-		text = font.render(txt, True, "black")
-		self.screen.blit(text, (posX, posY))
+	def writeOnScreen(self, txt, posX = 0, posY = 0, colour = "black", fontsize = 30, reactive = False):
+		font = pygame.font.Font(None, fontsize)
+		if reactive:
+			text = []
+			for i, char in enumerate(txt):
+				rgb = self.screen.get_at((round(posX + i * font.size("_")[0]), posY))[:3]
+				#rgb = self.screen.get_at((round(posX), round(posY)))[:3]
+				if rgb[0] + rgb[1] + rgb[2] >= 383:
+					resp_colour = "black"
+				else:
+					resp_colour = "white"
+				text.append(font.render(char, True, resp_colour))
+		else:
+			text = font.render(txt, True, colour)
+
+		if isinstance(text, List):
+			for i, t in enumerate(text):
+				self.screen.blit(t, (posX + i * font.size("_")[0], posY))
+		else:
+			self.screen.blit(text, (posX, posY))# Kinda consol log -> Write stuff on the canvas
 		
 	def compare_subtraction(self, a, b):
 		result = a - b

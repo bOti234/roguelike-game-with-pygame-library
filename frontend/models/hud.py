@@ -5,10 +5,31 @@ from ..utils.database import fetch_user, submit_new_user, submit_logout, submit_
 
 class HUD():
 	def __init__(self, screen, screen_width, screen_height):
-		self.screen = screen
+		self.screen: pygame.Surface = screen
 		self.screen_width = screen_width
 		self.screen_height = screen_height
 
+class StatBar(HUD):
+	def __init__(self, screen, screen_width, screen_height, stat_type, x, y, width, height, stat_background_rgba, trasparent_screen, border_width, border_radius, stat_colour, border_colour = "black"):
+		super().__init__(screen, screen_width, screen_height)
+		self.stat_type = stat_type
+		self.border_rect = pygame.rect.Rect(x, y, width, height)
+		self.stat_rect = pygame.rect.Rect(x + border_width, y + border_width, width - border_width*2, height - border_width*2)
+		self.stat_background_rgba = stat_background_rgba
+		self.trasparent_screen = trasparent_screen
+		self.border_colour = border_colour
+		self.border_width = border_width
+		self.border_radius = border_radius
+		self.stat_colour = stat_colour
+
+	def draw(self, newWidth):
+		self.stat_rect.width = newWidth
+
+		pygame.draw.rect(self.screen, self.stat_colour, self.stat_rect, 0, self.border_radius)
+		pygame.draw.rect(self.screen, self.border_colour, self.border_rect, self.border_width, self.border_radius)
+		
+	def drawTransparent(self):
+		pygame.draw.rect(self.trasparent_screen, self.stat_background_rgba, self.border_rect, 0, self.border_radius)
 
 class Inventory(HUD):
 	def __init__(self):

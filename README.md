@@ -263,9 +263,25 @@ Github repository for the second assignment of Programming II.
 
 -Moved the HUD class and its subclasses to hud.py for better organisation.
 
-## TODO list:
+### Update v1.3.4
 
--Putting the exp orbs behind/under the enemies. Currently they are drawn over the enemies
+-Moved experience orbs behind the enemies.
+
+-Added a subclass for HUD, the StatBar class.
+
+-Added proper background to the health, barrier and experience bars.
+
+-Moved and reshaped the health, barrier and experience bars.
+
+-Moved the experience progress text to the center of the bar, addded responsive feature to it. Now the colour of the text changes based on the background behind it.
+
+-Added boxes for the clock and for the points text.
+
+-Removed all unnececary text on the screen.
+
+-Removed the drawn hitboxes of the player, the enemies and the orb.
+
+## TODO list:
 
 -Making the design of the selectors better (e.g., fixing image sizes, positions, making letters larger, creating borders for the boxes, other colours)
 
