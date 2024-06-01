@@ -63,7 +63,8 @@ class PlayerCharacter(GameObject):
 		objtype = "player"
 		super().__init__(objtype, pygame.Vector2(position.x, position.y), radius*2, radius*2)
 
-		self.buffs: Dict[str, Union[int, float, Dict[str, Union[int, float]]]] = {
+		self.status_effects: Dict[str, Union[int, float, Dict[str, Union[int, float, Enemy]]]] = {
+			'weaken':0.0,
 			"damage percentage":{},
 			"damage flat": {},
 			"health percentage": {},
@@ -87,20 +88,20 @@ class PlayerCharacter(GameObject):
 		self.experience_queue: int = 0
 	
 	def setStats(self):
-		flatbuff_health = sum([0]+[val for val in self.buffs["health flat"].values()])
-		percbuff_health = math.prod([1 + val for val in self.buffs["health percentage"].values()])
+		flatbuff_health = sum([0]+[val for val in self.status_effects["health flat"].values()])
+		percbuff_health = math.prod([1 + val for val in self.status_effects["health percentage"].values()])
 		
-		flatbuff_speed = sum([0]+[val for val in self.buffs["speed flat"].values()])
-		percbuff_speed = math.prod([1 + val for val in self.buffs["speed percentage"].values()])
+		flatbuff_speed = sum([0]+[val for val in self.status_effects["speed flat"].values()])
+		percbuff_speed = math.prod([1 + val for val in self.status_effects["speed percentage"].values()])	# calculates the product
 
 		self.health_max = (self.health_max_base + (self.level - 1) * 10 + flatbuff_health) * percbuff_health
 		self.speed = (self.speed_base + (self.level - 1) * 25 + flatbuff_speed) * percbuff_speed
 
-	def updateBuffs(self, value, buffname, passive = None):
+	def updateStatusEffects(self, value, statusname, passive = None):
 		if passive:
-			self.buffs[buffname].update({passive: value})
+			self.status_effects[statusname].update({passive: value})
 		else:
-			self.buffs.update({buffname: value})
+			self.status_effects.update({statusname: value})
 	
 	def updateExperience(self):
 		n = 0
@@ -164,20 +165,20 @@ class Passive():
 				if self.level > 1:
 					self.value += 1
 					self.cooldown_max -= 1
-				player.updateBuffs(self.value, "health regen")
+				player.updateStatusEffects(self.value, "health regen")
 			
 			if self.name == "Protective Barrier":
 				if self.level > 1:
 					self.value += 5
 					self.cooldown_max -= 1
-				player.updateBuffs(self.value, "barrier")
+				player.updateStatusEffects(self.value, "barrier")
 
 			if self.name == "Greater Strength":
 				if self.level > 1:
 					self.value += 0.05
-					player.updateBuffs(self.value, "damage percentage", self.name)
+					player.updateStatusEffects(self.value, "damage percentage", self.name)
 				if self.level == 5:
-					player.updateBuffs(1, "damage flat", self.name)
+					player.updateStatusEffects(1, "damage flat", self.name)
 
 			if self.name == "Dodge":
 				if self.level > 1:
@@ -192,19 +193,19 @@ class Passive():
 				if self.level > 1:
 					self.value += 5
 					self.count += 1
-				player.updateBuffs(self.value, "gunslinger")
+				player.updateStatusEffects(self.value, "gunslinger")
 
 			if self.name == "Berserk":
 				if self.level > 1:
 					self.value += 0.2
-				player.updateBuffs(self.value, "damage percentage", self.name)
+				player.updateStatusEffects(self.value, "damage percentage", self.name)
 			
 			if self.name == "Greater Vitality":
 				if self.level > 1:
 					self.value += 10
-				player.updateBuffs(self.value, "health flat", self.name)
+				player.updateStatusEffects(self.value, "health flat", self.name)
 				if self.level == 5:
-					player.updateBuffs(0.2, "health percentage", self.name)
+					player.updateStatusEffects(0.2, "health percentage", self.name)
 			
 			if  self.name == "Slowing Aura":
 				if self.level > 1:
@@ -469,22 +470,29 @@ class Weapon(GameObject):
 
 class Enemy(GameObject):
 
-	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal"):
+	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal", event_type = None):
 		objtype = "enemy"
 		super().__init__(objtype, position, radius * 2, radius * 2)
 
 		self.position_original = pygame.Vector2(position.x, position.y)
 		self.position_destination = pygame.Vector2(0,0)
 		self.level = level
+		self.event_type = event_type
 		if self.level > 21:
 			self.level = 21
+		if self.event_type == None:
+			scale = self.level - 1
+		else:
+			scale = 0
 		self.radius = radius
-		self.health = health + (self.level - 1) * 5
+		self.health = health + scale * 5
 		self.colour = colour
-		self.damage = damage + (self.level - 1) * 1
-		self.speed = speed + (self.level - 1) * 2
+		self.fixedcolour = colour
+		self.damage = damage + scale * 1
+		self.speed = speed + scale * 2
 		self.weakness = weakness
 		self.type = type
+		
 		self.hitCooldown = 0
 
 

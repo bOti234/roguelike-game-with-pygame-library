@@ -1,0 +1,4 @@
+name,enemy,type,duration
+Loot Goblin,1,chase,30
+Enemy Cage,45,cage,40
+Projectile Dodge,0,dodge,30

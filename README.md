@@ -255,6 +255,8 @@ Github repository for the second assignment of Programming II.
 
 ### Update v1.3.3
 
+-Added play again user menu button.
+
 -Added death screen when player dies. The player can create an account or log in to save their score if the played as a guest.
 
 -Added score gain to the game. Currently score scales with time, defeated enemies and picked up experience.
@@ -273,13 +275,23 @@ Github repository for the second assignment of Programming II.
 
 -Moved and reshaped the health, barrier and experience bars.
 
--Moved the experience progress text to the center of the bar, addded responsive feature to it. Now the colour of the text changes based on the background behind it.
+-Moved the experience progress text to the center of the bar, added responsive feature to it. Now the colour of the text changes based on the background behind it.
 
 -Added boxes for the clock and for the points text.
 
 -Removed all unnececary text on the screen.
 
 -Removed the drawn hitboxes of the player, the enemies and the orb.
+
+### Update v1.3.5
+
+-Added inventory button. Currently nothing significant happens, when the player presses the button.
+
+-Added events to the game. Every 30 seconds a random event will happen for a set duration. Currently implemented events are listed below.
+
+-Implemented an event where a large amount of slow enemies spawn around the player and start aproaching them, slowly restricting the players movement.
+
+-Implemented an event where a fast moving smaller enemy moves across the screen with random movement. It has a large amount of hp but doesn't deal damage. When defeated, it gives the player a high amount of experience and spawns a weaponkit.
 
 ## TODO list:
 

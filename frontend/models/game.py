@@ -8,7 +8,8 @@ from typing import List, Dict, Union
 from .player import User
 from .gamesettings import GameSettings
 from .gameobject import PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet
-from .hud import HUD, StatBar, Inventory, Menu
+from .hud import HUD, StatBar, Inventory, Menu, Button
+from .event import Event
 from ..utils.database import fetch_scoreboard
 
 # Example of submitting a new score
@@ -18,7 +19,6 @@ class Game():
 	def __init__(self, csrf_token):
 		self.difficultylist: List[str] = ["easy","normal","hard"]
 		self.speedlist: List[str] = ["slow","normal","fast"]
-		self.players: List[User] = []
 
 		# Fetching high scores
 		self.scoreboard = fetch_scoreboard()
@@ -45,7 +45,7 @@ class Game():
 			screen_height = screen_height,
 			game_size = 40
 			)
-		self.lastsecond = 0
+		self.lastsecond = 1
 		self.gamescore = 0
 		self.userdata = userdata
 		player_radius = 40 # With this only the map will be affected by game size                     #self.settings.game_size    # Bit unnecesary
@@ -56,7 +56,6 @@ class Game():
 
 		self.passivelist = self.getPassives()
 		self.player_passives: Dict[str, Passive] = {}
-
 		# passive = [passive for passive in self.passivelist if passive.name == "Slowing Aura"][0]		# This is just for testing / later with game modificators
 		# self.player_passives.update({passive.name: passive})
 		# self.player_passives[passive.name].upgradeItem(self.player, 5)
@@ -69,6 +68,11 @@ class Game():
 		if len(self.weaponlist) > 0:
 			self.player_weapons.update({self.weaponlist[0].name: self.weaponlist[0]})
 			self.player_weapons[self.weaponlist[0].name].upgradeItem(amount = 1)
+
+		self.eventlist: List[Event] = self.getEvents()
+		self.current_event = None
+		self.eventCooldown = 30
+		self.eventActive = False
 
 		self.bulletGroup: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
 		self.ItemGroup: pygame.sprite.Group[Union[WeaponKit, HealthKit, Magnet]] = pygame.sprite.Group()
@@ -114,7 +118,6 @@ class Game():
 		)
 
 		return [health_bar, barrier_bar, experience_bar]
-
 
 	def getPassives(self):
 		# reach = Passive(   #TODO:
@@ -172,17 +175,40 @@ class Game():
 				weaken = float(row['weaken'])
 			)
 			weaponlist.append(weapon)
-
 		return weaponlist
+	
+	def getEvents(self):
+		dirname = os.path.dirname(__file__)
+		filepath_pasive = os.path.join(dirname, "../../assets/instances/")
+		eventlist = []
+		table = pandas.DataFrame(pandas.read_csv(filepath_pasive+"/events.csv"))
+		for i, row in table.iterrows():
+			event = Event(
+				name = str(row['name']),
+				numberofenemies = int(row['enemy']),
+				event_type = str(row['type']),
+				duration = int(row['duration'])
+			)
+			eventlist.append(event)
+		return eventlist	
+	
+	def setupPygameElements(self):
+		self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
+		pygame.display.set_caption("Epic roguelike game")
+		self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+		self.traspscreen_hud = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+		self.statbarlist = self.getStatBars()
+
+		# Set up inventory button:
+		dirname = os.path.dirname(__file__)
+		filename = os.path.join(dirname, '../../assets/images/buttons/')
+		inventory_image = pygame.image.load(filename+"/button_inventory.png").convert_alpha()
+		self.inventory_button = Button(15, 15, inventory_image, 0.2)
 
 	def openMainMenu(self):
 		if not pygame.get_init():
 			pygame.init()
-			self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
-			pygame.display.set_caption("Epic roguelike game")
-			self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
-			self.traspscreen_hud = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
-			self.statbarlist = self.getStatBars()
+			self.setupPygameElements()
 
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
@@ -205,6 +231,9 @@ class Game():
 		elif response == "return to main menu":
 			self.openMainMenu()
 	
+	def openInventoryMenu(self):
+		print("epic")
+
 	def openDeathMenu(self):
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
@@ -314,24 +343,28 @@ class Game():
 			self.updatePointingArrowPosition()
 			self.updateExperiencePosition()
 			self.updateEnemyPosition()
+			self.updateEventTimer()
 
 			#self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
-			self.drawTimeAndScore()
-
-			self.drawStatBoxes()
+			#self.writeOnScreen(str(self.lastsecond), 300, 300)
+			self.drawHUDElements()
 			
 			self.checkKeysPressed() # Update background position based on player movement
 
+			if not self.eventActive:
+				if self.eventCooldown > 0:
+					self.eventCooldown -= self.dt
+				else:
+					self.eventCooldown = 30
+					self.startEvent()
+
 			pygame.display.flip() # flip() the display to put your work on self.screen
-			
 
 			self.dt = clock.tick(self.settings.fps) / 1000 # self.dt is delta time in seconds since last frame
 			self.time += self.dt
 			if self.lastsecond < round(self.time)//1:
 				self.updateGameScore('second passed')
 				self.lastsecond = round(self.time)//1
-			#if self.time / 60 < self.time // 60 + 0.05 and self.time / 60 > self.time // 60 - 0.05:
-
 		
 		pygame.quit()
 
@@ -347,7 +380,7 @@ class Game():
 		if n > 0:
 			self.openLevelUpMenu(n)
 			
-	def drawTimeAndScore(self):
+	def drawHUDElements(self):
 		# Draw time box:
 		font = pygame.font.Font(None, 30)
 		minutes = round(self.time//60)
@@ -367,6 +400,17 @@ class Game():
 		pygame.draw.rect(self.screen, (10, 43, 57), score_box, 0, 15)
 		pygame.draw.rect(self.screen, "cyan", score_box, 3, 15)
 		self.writeOnScreen(score_text, score_box.x + (score_box.width - font.size(score_text)[0])/2, score_box.y + 5, (200, 255, 255))
+
+		# Draw the inventory button:
+		inventory_background_rect = pygame.Rect(self.inventory_button.rect.x - 7, self.inventory_button.rect.y - 7, self.inventory_button.rect.width + 14, self.inventory_button.rect.height + 14)
+		pygame.draw.rect(self.screen, (10, 43, 57), inventory_background_rect, 0, 5)
+		pygame.draw.rect(self.screen, "cyan", inventory_background_rect, 4, 5)
+		if self.inventory_button.draw(self.screen):
+			
+			self.openInventoryMenu()
+
+		# Draw Stat boxes like exp bar, health bar, barrier bar:
+		self.drawStatBoxes()
 	
 	def drawStatBoxes(self):
 		for bar in self.statbarlist:
@@ -383,7 +427,7 @@ class Game():
 			elif bar.stat_type == "barrierbar":
 				if "Protective Barrier" in self.player_passives.keys(): # NOOO THIS IS AN ITERATION AS WELLLL
 					barrier = self.player_passives["Protective Barrier"]
-					bar.draw((self.player.width - 4) * self.player.buffs["barrier"] / barrier.value)
+					bar.draw((self.player.width - 4) * self.player.status_effects["barrier"] / barrier.value)
 			elif bar.stat_type == "experiencebar":
 				bar.draw((self.settings.screen_width) * self.player.experience_current / self.player.experience_max)
 				exp_progress_txt = str(self.player.experience_current)+" / "+str(self.player.experience_max)
@@ -408,59 +452,39 @@ class Game():
 		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (1 + steps_x), self.background.y - image_rect.height * (0 + steps_y)))
 		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (0 + steps_x), self.background.y - image_rect.height * (1 + steps_y)))
 		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (0 + steps_x), self.background.y - image_rect.height * (0 + steps_y)))
-
-
-	def notTouchingBorder(self):
-		# li = []
-		# if (self.background.x - self.settings.screen_width + self.settings.game_size**2*2 - self.player.radius + 300 * self.dt)  <= self.player.position.x:
-		# 	li.append(False)
-		# 	li.append("right")
-		# if (self.background.x - self.settings.screen_width + self.player.radius + 300 * self.dt)  >= self.player.position.x:
-		# 	li.append(False)
-		# 	li.append("left")
-		# if (self.background.y - self.settings.screen_height + self.player.radius + 300 * self.dt)  >= self.player.position.y:
-		# 	li.append(False)
-		# 	li.append("up")
-		# if (self.background.y - self.settings.screen_height + self.settings.game_size**2*2 - self.player.radius + 300 * self.dt)  <= self.player.position.y:
-		# 	li.append(False)
-		# 	li.append("down")
-		# if len(li) == 0:
-		# 	li = [True, "nothing"]
-		# return list(set(li))
-		pass
 	
 	def checkKeysPressed(self, rate = 1):
 		keys = pygame.key.get_pressed()
 		#gate = self.notTouchingBorder()
 		if self.running:
 			if keys[pygame.K_w]:# and "up" not in gate:
-				self.background.y += self.settings.speed * self.dt * rate
+				self.background.y += self.player.speed * self.dt * rate
 
 			if keys[pygame.K_s]:# and "down" not in gate:
-				self.background.y -= self.settings.speed * self.dt * rate
+				self.background.y -= self.player.speed * self.dt * rate
 
 			if keys[pygame.K_a]:# and "left" not in gate:
-				self.background.x += self.settings.speed * self.dt * rate
+				self.background.x += self.player.speed * self.dt * rate
 
 			if keys[pygame.K_d]:# and "right" not in gate:
-				self.background.x -= self.settings.speed * self.dt * rate
+				self.background.x -= self.player.speed * self.dt * rate
 
 			if [keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d]].count(True) == 2:
 				if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
-					self.background.y += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
-					self.background.x += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.y += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.x += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
 				if keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
-					self.background.y += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
-					self.background.x -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.y += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.x -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
 				if keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
-					self.background.y -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
-					self.background.x += self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.y -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.x += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
 				if keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
-					self.background.y -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
-					self.background.x -= self.settings.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.y -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
+					self.background.x -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
 		if keys[pygame.K_ESCAPE]:
 			if self.running:
@@ -480,7 +504,7 @@ class Game():
 			if pygame.sprite.collide_rect(item, self.player):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
 				item.kill()
 				if item.objtype == "weaponkit":
-					response = self.openSelectWeaponMenu()
+					self.openSelectWeaponMenu()
 				elif item.objtype == "healthkit":
 					self.player.health_current += 10
 					if self.player.health_current > self.player.health_max:
@@ -493,12 +517,13 @@ class Game():
 			for enemy in self.EnemyGroup:
 				if pygame.sprite.collide_rect(bullet, enemy):
 					self.damageEnemy(bullet, enemy)
+		self.writeOnScreen(str(self.player.speed), 200, 300)
 		for enemy in self.EnemyGroup:
 			if pygame.sprite.collide_circle(self.player, enemy):
 				if self.player.hitCooldown <= 0:
 					self.player.hitCooldown = 1
-					if self.player.buffs["dodge count"] > 0 and random.random() >= 0.75:
-						self.player.buffs["dodge count"] -= 1
+					if self.player.status_effects["dodge count"] > 0 and random.random() >= 0.75:
+						self.player.status_effects["dodge count"] -= 1
 					else:
 						damageperc = 1
 						for weaponname, attr in [(weaponname, attr) for weaponname, attr in enemy.status_effects.items() if weaponname in self.player_weapons.keys()]:
@@ -507,11 +532,11 @@ class Game():
 								damageperc *= (1 - weapon.status_effects["weaken"])
 						if "Berserk" in self.player_passives.keys():	#TODO: make it usable with more buffs/nerfs for enemy damage.
 							damageperc *= (1 + self.player_passives["Berserk"].value)
-						if self.player.buffs["barrier"] >= enemy.damage * damageperc:
-							self.player.buffs["barrier"] -= enemy.damage * damageperc
+						if self.player.status_effects["barrier"] >= enemy.damage * damageperc:
+							self.player.status_effects["barrier"] -= enemy.damage * damageperc
 						else:
-							remainder = enemy.damage * damageperc - self.player.buffs["barrier"]
-							self.player.buffs["barrier"] = 0
+							remainder = enemy.damage * damageperc - self.player.status_effects["barrier"]
+							self.player.status_effects["barrier"] = 0
 							self.player.health_current -= remainder
 					if self.player.health_current <= 0:
 						self.player.health_current = 0
@@ -530,8 +555,9 @@ class Game():
 		if bullet.weaponname == "Damaging Field":
 			if enemy.hitCooldown <= 0:
 				#self.writeOnScreen(str(enemy.status_effects[weapon.name]), bullet.position.x, bullet.position.y)
-				enemy.status_effects[weapon.name].update({"active":True})
-				enemy.status_effects[weapon.name].update({"duration":0.2})
+				if enemy.event_type == None:
+					enemy.status_effects[weapon.name].update({"active":True})
+					enemy.status_effects[weapon.name].update({"duration":0.2})
 				enemy.health -= bullet.damage
 				enemy.hitCooldown = 0.1
 		elif enemy not in bullet.enemiesHit:
@@ -540,13 +566,14 @@ class Game():
 				critState = 2
 			else:
 				critState = 1
-			flatbuff = sum([0]+[val for val in self.player.buffs["damage flat"].values()])
-			percbuff = math.prod([1 + val for val in self.player.buffs["damage percentage"].values()]) * critState
+			flatbuff = sum([0]+[val for val in self.player.status_effects["damage flat"].values()])
+			percbuff = math.prod([1 + val for val in self.player.status_effects["damage percentage"].values()]) * critState
 			enemy.health -= (bullet.damage + flatbuff) * (1 + weapon.status_effects["weaken"]) * percbuff
 			bullet.enemiesHit.append(enemy)
 			enemy.hitCooldown = 0.5
-			enemy.status_effects[weapon.name].update({"active":True})
-			enemy.status_effects[weapon.name].update({"duration":0.2})
+			if enemy.event_type == None:
+				enemy.status_effects[weapon.name].update({"active":True})
+				enemy.status_effects[weapon.name].update({"duration":0.2})
 			if bullet.weaponname == "Cluster Bombs" and "mine" not in bullet.objtype:
 				b = weapon.getClusters(bullet)
 				weapon.bullets.add(b)
@@ -564,6 +591,8 @@ class Game():
 				
 		if enemy.health <= 0:
 			# if enemy in self.EnemyGroup:
+			if enemy.event_type == 'chase':
+				self.ItemGroup.add(WeaponKit(pygame.Vector2(enemy.position.x, enemy.position.y)))
 			self.spawnEnemyDrops(enemy)
 			enemy.kill()
 			self.updateGameScore(event = 'enemy killed', obj = enemy)
@@ -582,7 +611,7 @@ class Game():
 						)
 					kit = WeaponKit(randpos)
 					self.ItemGroup.add(kit)
-					self.WeaponKitCooldown = 70  - (self.time // 30) - self.player.buffs["gunslinger"]
+					self.WeaponKitCooldown = 70  - (self.time // 30) - self.player.status_effects["gunslinger"]
 					if self.WeaponKitCooldown < 15:
 							self.WeaponKitCooldown = 15
 				else:
@@ -637,7 +666,7 @@ class Game():
 
 		if chance < 0.25 and enemy.type == "miniboss":
 			e = Experience(enemy.position, 20, "purple", enemy.level * 5000)
-		elif (chance < 1/3 and enemy.type == "brute") or ( chance < 0.9 and enemy.type == "miniboss"):
+		elif (chance < 1/3 and enemy.type == "brute") or ( chance < 0.9 and enemy.type == "miniboss") or enemy.event_type == 'chase':
 			e = Experience(enemy.position, 16, "orange", enemy.level * 1000)
 		elif chance < 0.2 or enemy.type == "brute" or enemy.type == "miniboss":
 			e = Experience(enemy.position, 12, "yellow", enemy.level * 100)
@@ -649,7 +678,7 @@ class Game():
 	def updateItemPosition(self):
 		for item in self.ItemGroup:
 			if item.objtype == "weaponkit" or item.objtype == "healthkit":
-				item.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				item.setPositionBasedOnMovement(self.player.speed, self.dt)
 				rect = pygame.Rect(item.position.x, item.position.y, item.width, item.height)
 				pygame.draw.rect(self.screen, item.colour, rect)
 				pygame.draw.rect(self.screen, "black", rect, 3)
@@ -661,7 +690,7 @@ class Game():
 						item.kill()
 
 			elif item.objtype == "magnet":
-				item.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				item.setPositionBasedOnMovement(self.player.speed, self.dt)
 				rect = pygame.Rect(item.position.x, item.position.y, item.width, item.height)
 				pygame.draw.arc(self.screen, "black", rect, math.radians(0), math.radians(180), 23)
 				pygame.draw.arc(self.screen, "red", rect, math.radians(90), math.radians(180), 20)
@@ -721,9 +750,13 @@ class Game():
 
 			enemy.position_original.x = enemy.position.x
 			enemy.position_original.y = enemy.position.y
-			enemy.position_destination.x = self.player.position.x
-			enemy.position_destination.y = self.player.position.y
-		
+			if enemy.event_type == None:
+				enemy.position_destination.x = self.player.position.x
+				enemy.position_destination.y = self.player.position.y
+			elif enemy.event_type == 'chase':
+				enemy.position_destination.x += (20 + 60 * random.random()) * self.getSign()
+				enemy.position_destination.y += (20 + 60 * random.random()) * self.getSign()
+			
 			distance = math.sqrt((enemy.position_destination.x - enemy.position_original.x)**2 + (enemy.position_destination.y - enemy.position_original.y)**2) + 1
 			sinus = abs((enemy.position_destination.y - enemy.position_original.y)/distance) * self.compare_subtraction(enemy.position_destination.y, enemy.position_original.y)
 			cosinus = abs((enemy.position_destination.x - enemy.position_original.x)/distance) * self.compare_subtraction(enemy.position_destination.x, enemy.position_original.x)
@@ -746,12 +779,18 @@ class Game():
 
 			enemy.updateStatusDict(self.dt)
 
-			enemy.setPositionBasedOnMovement(self.settings.speed, self.dt)
+			tempX = enemy.position.x
+			tempY = enemy.position.y
+			enemy.setPositionBasedOnMovement(self.player.speed, self.dt)
+			if enemy.event_type == 'cage' or enemy.event_type == 'chase':
+				enemy.position_destination.x -= (tempX - enemy.position.x)
+				enemy.position_destination.y -= (tempY - enemy.position.y)
+
 			if enemy.hitCooldown > 0:
 				enemy.colour = "darkred"
 				enemy.hitCooldown -= self.dt
 			else:
-				enemy.colour = "red"
+				enemy.colour = enemy.fixedcolour
 
 			if slowness != 1:
 				enemy.colour = (125, 0, 64)
@@ -770,7 +809,7 @@ class Game():
 
 			tempX = exp.position.x
 			tempY = exp.position.y
-			exp.setPositionBasedOnMovement(self.settings.speed, self.dt)
+			exp.setPositionBasedOnMovement(self.player.speed, self.dt)
 			
 
 			if distance < exp.min_distance:
@@ -811,7 +850,7 @@ class Game():
 			else:
 				pygame.draw.circle(self.screen, exp.colour, exp.position, exp.radius)
 			pygame.draw.circle(self.screen, "black", exp.position, exp.radius, 2)
-	
+
 	def getClosestEnemy(self, weapon: Weapon, n: int = 1):
 		if n > 0:
 			closestEnemies = [[enemy, math.sqrt((enemy.position.x - weapon.position.x)**2 + (enemy.position.y - weapon.position.y)**2)] for enemy in self.EnemyGroup if math.sqrt((enemy.position.x - weapon.position.x)**2 + (enemy.position.y - weapon.position.y)**2) <= weapon.range]
@@ -831,6 +870,23 @@ class Game():
 				return True
 		return False
 
+	def startEvent(self):
+		if not self.eventActive:
+			event = random.choice(self.eventlist)
+			event.populateEnemyList(self.player, self.weaponlist)
+			self.current_event = event
+			self.eventActive = True
+			for enemy in event.enemylist:
+				self.EnemyGroup.add(enemy)
+
+	def updateEventTimer(self):
+		self.writeOnScreen(str(self.eventActive), 200, 200)
+		if self.current_event:
+			response = self.current_event.updateTimer(self.dt)
+			if response:
+				self.eventActive = False
+				self.current_event = None
+	
 	def attackCycle(self, mouse_pos: pygame.Vector2):
 		#self.writeOnScreen(" ".join([key for key in self.player_weapons.keys()]))
 		for weapon in self.player_weapons.values():
@@ -849,14 +905,14 @@ class Game():
 				weapon.position.x += (weapon.position_destination.x - weapon.position.x) * 0.035
 				weapon.position.y += (weapon.position_destination.y - weapon.position.y) * 0.035
 
-				weapon.setPositionBasedOnMovement(self.settings.speed, self.dt , 0.55)
+				weapon.setPositionBasedOnMovement(self.player.speed, self.dt , 0.55)
 
 			if weapon.name == "Homing Arrow":
 				weapon.position_original.x = weapon.position.x
 				weapon.position_original.y = weapon.position.y
 				tempX = weapon.position.x
 				tempY = weapon.position.y
-				weapon.setPositionBasedOnMovement(self.settings.speed, self.dt)
+				weapon.setPositionBasedOnMovement(self.player.speed, self.dt)
 				for pos in weapon.pathlist:
 					pos.x += weapon.position.x - tempX
 					pos.y += weapon.position.y - tempY
@@ -973,13 +1029,13 @@ class Game():
 						if math.sqrt((bullet.position.x - bullet.position_original.x)**2 + (bullet.position.y - bullet.position_original.y)**2) + 1 >= distance - 15:
 							bullet.position.x = bullet.position_destination.x
 							bullet.position.y = bullet.position_destination.y
-							bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
+							bullet.setPositionBasedOnMovement(self.player.speed, self.dt)
 							bullet.position_destination.x = bullet.position.x
 							bullet.position_destination.y = bullet.position.y
 						else:
 							tempX = bullet.position.x
 							tempY = bullet.position.y
-							bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
+							bullet.setPositionBasedOnMovement(self.player.speed, self.dt)
 							bullet.position_destination.x += bullet.position.x - tempX
 							bullet.position_destination.y += bullet.position.y - tempY
 							bullet.position.x += cosinus * weapon.speed * 0.35
@@ -994,7 +1050,7 @@ class Game():
 
 						#tempX = bullet.position.x
 						#tempY = bullet.position.y
-						bullet.setPositionBasedOnMovement(self.settings.speed, self.dt )
+						bullet.setPositionBasedOnMovement(self.player.speed, self.dt )
 
 						bullet.position_destination.x = bullet.position.x# - tempX
 						bullet.position_destination.y = bullet.position.y# - tempY
@@ -1015,7 +1071,7 @@ class Game():
 
 						tempX = bullet.position.x
 						tempY = bullet.position.y
-						bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
+						bullet.setPositionBasedOnMovement(self.player.speed, self.dt)
 
 						bullet.position_destination.x += bullet.position.x - tempX
 						bullet.position_destination.y += bullet.position.y - tempY
@@ -1051,7 +1107,7 @@ class Game():
 
 					tempX = bullet.position.x
 					tempY = bullet.position.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt )
+					bullet.setPositionBasedOnMovement(self.player.speed, self.dt )
 
 					bullet.position_destination.x += bullet.position.x - tempX
 					bullet.position_destination.y += bullet.position.y - tempY
@@ -1091,7 +1147,7 @@ class Game():
 
 					tempX = bullet.position.x
 					tempY = bullet.position.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
+					bullet.setPositionBasedOnMovement(self.player.speed, self.dt)
 					if weapon.name == "Scatter Rifle":
 						bullet.position_destination.x += bullet.position.x - tempX
 						bullet.position_destination.y += bullet.position.y - tempY
@@ -1174,7 +1230,7 @@ class Game():
 
 					bullet.position.x = self.player.position.x + weapon.distance * math.cos(bullet.rotation * math.pi / 180)
 					bullet.position.y = self.player.position.y + weapon.distance * math.sin(bullet.rotation * math.pi / 180)
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
+					bullet.setPositionBasedOnMovement(self.player.speed, self.dt)
 
 					#pygame.draw.rect(self.screen, "blue", bullet.rect)		#Bullet hitbox
 					pygame.draw.circle(self.screen, weapon.colour, (bullet.position.x, bullet.position.y), weapon.size)
@@ -1244,7 +1300,7 @@ class Game():
 
 					tempX = bullet.position.x
 					tempY = bullet.position.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt)
+					bullet.setPositionBasedOnMovement(self.player.speed, self.dt)
 					bullet.position_destination.x -= (tempX - bullet.position.x)
 					bullet.position_destination.y -= (tempY - bullet.position.y)
 					bullet.position_original.x -= (tempX - bullet.position.x)
@@ -1308,18 +1364,18 @@ class Game():
 					self.ItemGroup.add(WeaponKit(position))
 			if passive.cooldown_current <= 0:
 				if passive.name == "Health Regeneration":
-					self.player.health_current += self.player.buffs["health regen"]
+					self.player.health_current += self.player.status_effects["health regen"]
 					if self.player.health_current > self.player.health_max:
 						self.player.health_current = self.player.health_max
 					passive.cooldown_current = passive.cooldown_max
 				
 				if passive.name == "Protective Barrier":
-					self.player.buffs["barrier"] = passive.value
+					self.player.status_effects["barrier"] = passive.value
 					passive.cooldown_current = passive.cooldown_max
 
 				if passive.name == "Dodge":
-					if self.player.buffs["dodge count"] < passive.value:
-						self.player.buffs["dodge count"] += 1
+					if self.player.status_effects["dodge count"] < passive.value:
+						self.player.status_effects["dodge count"] += 1
 					passive.cooldown_current = passive.cooldown_max
 			else:
 				passive.updateCooldown(self.dt)
@@ -1337,7 +1393,7 @@ class Game():
 				if weapon.name == "Damaging Field":
 					bullet.position.x = bullet.position_destination.x
 					bullet.position.y = bullet.position_destination.y
-					bullet.setPositionBasedOnMovement(self.settings.speed, self.dt )
+					bullet.setPositionBasedOnMovement(self.player.speed, self.dt )
 
 					bullet.position_destination.x = bullet.position.x
 					bullet.position_destination.y = bullet.position.y
@@ -1391,11 +1447,12 @@ class Game():
 		else:
 			text = font.render(txt, True, colour)
 
-		if isinstance(text, List):
+		if isinstance(text, list):
 			for i, t in enumerate(text):
 				self.screen.blit(t, (posX + i * font.size("_")[0], posY))
 		else:
 			self.screen.blit(text, (posX, posY))# Kinda consol log -> Write stuff on the canvas
+			
 		
 	def compare_subtraction(self, a, b):
 		result = a - b
