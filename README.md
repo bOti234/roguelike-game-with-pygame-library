@@ -293,6 +293,18 @@ Github repository for the second assignment of Programming II.
 
 -Implemented an event where a fast moving smaller enemy moves across the screen with random movement. It has a large amount of hp but doesn't deal damage. When defeated, it gives the player a high amount of experience and spawns a weaponkit.
 
+### Update v1.3.6
+
+-Implemented an event where you have to dodge several bullets for 30 seconds. The bullets deal damage equal to a percentage of your health. Currently there are no indicators for the incoming bullets.
+
+-Implemented an event where a large group of enemies spawn near the player. They look like regular enemies, but their level is increased. (and with that, their stats as well)
+
+-Implemented an event where a bigger, slower, but stronger enemy, a miniboss spawns and tries to reach you. It has increased health and damage. Upon defeating it, it can give you a large amount of experience.
+
+-Finished mechanics, adjusted balance and finished design of laser beam.
+
+-Finished mechanics, adjusted balance and finished design of energy sword.
+
 ## TODO list:
 
 -Making the design of the selectors better (e.g., fixing image sizes, positions, making letters larger, creating borders for the boxes, other colours)

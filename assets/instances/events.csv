@@ -1,4 +1,6 @@
-name,enemy,type,duration
-Loot Goblin,1,chase,30
-Enemy Cage,45,cage,40
-Projectile Dodge,0,dodge,30
+name,enemy,type,duration,spawn cooldown
+Loot Goblin,1,chase,30,0
+Enemy Cage,45,cage,40,0
+Projectile Dodge,15,dodge,30,1.25
+Enemy Group,30,group,10,0
+Miniboss,1,miniboss,25,0

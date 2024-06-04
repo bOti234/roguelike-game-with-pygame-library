@@ -94,8 +94,8 @@ class PlayerCharacter(GameObject):
 		flatbuff_speed = sum([0]+[val for val in self.status_effects["speed flat"].values()])
 		percbuff_speed = math.prod([1 + val for val in self.status_effects["speed percentage"].values()])	# calculates the product
 
-		self.health_max = (self.health_max_base + (self.level - 1) * 10 + flatbuff_health) * percbuff_health
-		self.speed = (self.speed_base + (self.level - 1) * 25 + flatbuff_speed) * percbuff_speed
+		self.health_max = (self.health_max_base + flatbuff_health) * percbuff_health
+		self.speed = (self.speed_base + flatbuff_speed) * percbuff_speed
 
 	def updateStatusEffects(self, value, statusname, passive = None):
 		if passive:
@@ -163,7 +163,7 @@ class Passive():
 			
 			if self.name == "Health Regeneration":
 				if self.level > 1:
-					self.value += 1
+					self.value += 5
 					self.cooldown_max -= 1
 				player.updateStatusEffects(self.value, "health regen")
 			
@@ -202,7 +202,7 @@ class Passive():
 			
 			if self.name == "Greater Vitality":
 				if self.level > 1:
-					self.value += 10
+					self.value += 25
 				player.updateStatusEffects(self.value, "health flat", self.name)
 				if self.level == 5:
 					player.updateStatusEffects(0.2, "health percentage", self.name)
@@ -233,6 +233,7 @@ class Bullet(GameObject):
 		self.crit: bool = crit
 
 		self.enemiesHit: List[Enemy] = []
+		self.points: List[pygame.Vector2] = []
 
 	def addRotation(self, rotation):
 		self.rotation = rotation
@@ -240,8 +241,24 @@ class Bullet(GameObject):
 	def addAnimationRotation(self, rotation):
 		self.animation_rotation = rotation
 
+	def getLinePoints(self, destination: pygame.Vector2, original: pygame.Vector2):
+		points_list: List[pygame.Vector2] = []
+
+		dx = destination.x - original.x
+		dy = destination.y - original.y
+		steps = round(max(abs(dx), abs(dy))/17) + 1
+		x_increment = dx / steps
+		y_increment = dy / steps
+
+		x, y = original.x, original.y
+		for _ in range(steps + 1):
+			points_list.append(pygame.Vector2(x, y))
+			x += x_increment
+			y += y_increment
+		return points_list
+
 class Weapon(GameObject):
-	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], charge: int, damage: float, pierce: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
+	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], range: int, charge: int, damage: float, pierce: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
 		objtype = "weapon"
 		self.pattern: str = pattern
 		self.name: str = name
@@ -256,16 +273,12 @@ class Weapon(GameObject):
 			self.distance = None
 			width_and_height = size
 
-		self.range = None
-		if self.name == "Attack Drone":
-			self.range = 300
+		super().__init__(objtype, position, width_and_height, width_and_height)
+
+		self.range = range
 
 		if self.name == "Homing Arrow":
-			self.range = 500
 			self.pathlist: List[pygame.Vector2] = []
-
-		if self.name == "Damaging Field":
-			self.range = 800
 		
 		if self.name == "Cluster Bombs":
 			self.projectile_damage = 10
@@ -281,8 +294,6 @@ class Weapon(GameObject):
 
 		
 		self.status_effects = {"slow":slow, "knockback":knockback, "weaken":weaken}
-
-		super().__init__(objtype, position, width_and_height, width_and_height)
 
 		self.cooldown_max: float = cooldown_max
 		self.cooldown_current: float = cooldown_max
@@ -447,6 +458,20 @@ class Weapon(GameObject):
 						self.speed += 5
 						self.size += 2
 
+					if self.name == 'Laser Beam':
+						self.damage += 0.35
+						self.range += 125
+						self.size += 3
+						self.cooldown_max -= 0.125
+						self.bulletLifeTime += 0.8
+
+					if self.name == 'Energy Sword':
+						self.damage += 5
+						self.range += 65
+						self.size += 20
+						self.bulletLifeTime += 0.02
+						self.cooldown_max -= 0.1
+
 	
 	def getClusters(self, bullet: Bullet):
 		b = []
@@ -470,7 +495,7 @@ class Weapon(GameObject):
 
 class Enemy(GameObject):
 
-	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal", event_type = None):
+	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal", event_type = None, targetable = True):
 		objtype = "enemy"
 		super().__init__(objtype, position, radius * 2, radius * 2)
 
@@ -478,20 +503,22 @@ class Enemy(GameObject):
 		self.position_destination = pygame.Vector2(0,0)
 		self.level = level
 		self.event_type = event_type
-		if self.level > 21:
-			self.level = 21
-		if self.event_type == None:
+		if self.level > 30:
+			if event_type != 'group':
+				self.level = 30
+		if self.event_type == None or self.event_type == 'group':
 			scale = self.level - 1
 		else:
 			scale = 0
 		self.radius = radius
-		self.health = health + scale * 5
+		self.health = health + scale * 5 * 3**(scale//9)
 		self.colour = colour
 		self.fixedcolour = colour
-		self.damage = damage + scale * 1
-		self.speed = speed + scale * 2
+		self.damage = damage + scale * 1 + 2**(scale//9)
+		self.speed = speed + scale * 2 + 2**(scale//9)
 		self.weakness = weakness
 		self.type = type
+		self.targetable = targetable
 		
 		self.hitCooldown = 0
 

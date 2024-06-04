@@ -1,11 +1,13 @@
-name,cooldown_max,dmgtype,pattern,colour,size,speed,bulletlifetime,charge,damage,pierce,position,slow,knockback,weaken
-High-tech Rifle,1.5,normal,single straight,white,30,25,2.1,1,15,3,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.25,0
-Energy Orb,5,energy,constant circle,purple,15,40,4,1,15,5,"pygame.Vector2(0, 0)",0,0.3,0
-Boomerang,2.5,normal,single angled,gray,25,15,inf,1,15,5,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.4,0
-Flamethrower,0.3,fire,constant straight,orange,45,10,0.3,1,2,2,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.1,0,0
-Damaging Field,3,fire,aoe dot,red,150,15,4,1,1.25,99,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.3,0,0
-Attack Drone,0.01,laser,single pet,white,15,40,0.01,1,1,2,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0,0
-Cluster Bombs,2.5,energy,thrown cluster,yellow,50,20,10,1,10,1,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.7,0,0
-Pistols,0.2,normal,multiple straight,skyblue,20,20,0.35,1,6,1,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0,0
-Scatter Rifle,2.5,energy,scatter straight,blue,30,10,3.25,1,20,2,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.2,0.1
-Homing Arrow,0.05,normal,single homing,black,5,10,0.05,1,6,1,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.1,0,0.3
+name,cooldown_max,dmgtype,pattern,colour,size,speed,bulletlifetime,range,charge,damage,pierce,position,slow,knockback,weaken
+High-tech Rifle,1.5,normal,single straight,white,30,25,2.1,0,1,15,3,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.25,0
+Energy Orb,5,energy,constant circle,purple,15,40,4,0,1,15,5,"pygame.Vector2(0, 0)",0,0.3,0
+Boomerang,2.5,normal,single angled,gray,25,15,inf,0,1,15,5,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.4,0
+Flamethrower,0.3,fire,constant straight,orange,45,10,0.3,0,1,2,2,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.1,0,0
+Damaging Field,3,fire,aoe dot,red,150,15,4,800,1,1.25,99,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.3,0,0
+Attack Drone,0.01,laser,single pet,white,15,40,0.01,300,1,1,2,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0,0
+Cluster Bombs,2.5,fire,thrown cluster,yellow,50,20,10,0,1,10,1,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.7,0,0
+Pistols,0.2,normal,multiple straight,skyblue,20,20,0.35,0,1,6,1,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0,0
+Scatter Rifle,2.5,energy,scatter straight,blue,30,10,3.25,0,1,20,2,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.2,0.1
+Homing Arrow,0.05,laser,single homing,black,5,10,0.05,500,1,6,1,"pygame.Vector2(self.player.position.x, self.player.position.y)",0.1,0,0.3
+Laser Beam,1.5,laser,constant beam,orange,15,1,2,400,1,1,99,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0,0
+Energy Sword,1.2,energy,aoe slash,white,35,40,0.05,350,1,15,99,"pygame.Vector2(self.player.position.x, self.player.position.y)",0,0.25,0

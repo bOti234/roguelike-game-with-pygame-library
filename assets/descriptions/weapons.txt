@@ -8,3 +8,5 @@
 {"Pistols": "f'A pair of pistols. Damage: {self.damage}.'"}
 {"Scatter Rifle": "f'A rifle that shoots an energy orb that scatters after travelling a set distance. Damage: {self.damage}.'"}
 {"Homing Arrow": "f'An arrow that flies through the closest enemies. Damage: {self.damage}.'"}
+{"Laser Beam": "f'A high temperature beam that melts everything in its path. Damage: {self.damage}.'"}
+{"Energy Sword": "f'A greatsword that cuts everything it touches in half. Damage: {self.damage}.'"}
