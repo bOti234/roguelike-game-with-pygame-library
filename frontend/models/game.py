@@ -2,28 +2,23 @@ import pygame
 import os
 import math
 import time
+import threading
+import glob
 import random
 import pandas
 from typing import List, Dict, Union
-from .player import User
 from .gamesettings import GameSettings
 from .gameobject import PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet
 from .hud import HUD, StatBar, Inventory, Menu, Button
 from .event import Event
-from ..utils.database import fetch_scoreboard
+from .requesthandler import Requesthandler
 
 # Example of submitting a new score
 # submit_score('Player1', 5000)
-
 class Game():
-	def __init__(self, csrf_token):
+	def __init__(self):
 		self.difficultylist: List[str] = ["easy","normal","hard"]
 		self.speedlist: List[str] = ["slow","normal","fast"]
-
-		# Fetching high scores
-		self.scoreboard = fetch_scoreboard()
-
-		self.csrf_token = csrf_token
 	
 	def setSpeed(self, speed: str) -> int:
 		if speed in self.speedlist:
@@ -36,7 +31,7 @@ class Game():
 		else:
 			return 400
 	
-	def gameStart(self, difficulty: str, speed: str, fps: int, screen_width: int, screen_height: int, userdata = None):
+	def gameStart(self, difficulty: str, speed: str, fps: int, screen_width: int, screen_height: int, csrf_token, userdata = None):
 		self.settings: GameSettings = GameSettings(
 			difficulty = difficulty, 
 			speed = self.setSpeed(speed), 
@@ -45,13 +40,28 @@ class Game():
 			screen_height = screen_height,
 			game_size = 40
 			)
-		self.lastsecond = 1
-		self.gamescore = 0
-		self.userdata = userdata
 		player_radius = 40 # With this only the map will be affected by game size                     #self.settings.game_size    # Bit unnecesary
 		player_position: pygame.Vector2 = pygame.Vector2(self.settings.screen_width / 2, self.settings.screen_height / 2)
 		self.player = PlayerCharacter(player_radius, player_position, 200, self.settings.speed)
+		
+		# Fetching high scores
+		self.scoreboardupdate_cooldown = 10
+		self.scoreboard = None
+		self.request = Requesthandler()
+		self.request.make_async_request()
+		self.time = None
+		# Initializing pygame
+		if not pygame.get_init():
+			os.environ['SDL_VIDEO_CENTERED'] = '1'
+			pygame.init()
+			self.setupPygameElements()
+			loading_thread = threading.Thread(target=self.drawLoadingGif)
+			loading_thread.start()
 
+		self.csrf_token = csrf_token
+		self.lastsecond = 1
+		self.gamescore = 0
+		self.userdata = userdata
 		self.background: pygame.Vector2  = pygame.Vector2(self.player.position.x, self.player.position.y)
 
 		self.passivelist = self.getPassives()
@@ -65,14 +75,14 @@ class Game():
 		#   I'm making this a dicitonary instead of a list. When iterating through it, it costs more as a list, but when I need a specific weapon, I can just get the value with the weapon's name as the key.
 		#   That is apparently not an iteration so it's more effective than the aforementioned method.
 
-		self.weaponlist = [weapon for weapon in self.weaponlist if weapon.name == "Energy Sword"]		# This is just for testing / later with game modificators
+		# self.weaponlist = [weapon for weapon in self.weaponlist if weapon.name == "Laser Beam"]        # This is just for testing / later with game modificators
 		if len(self.weaponlist) > 0:
 			self.player_weapons.update({self.weaponlist[0].name: self.weaponlist[0]})
 			self.player_weapons[self.weaponlist[0].name].upgradeItem(amount = 1)
 
 		self.eventlist: List[Event] = self.getEvents()
 		self.current_event = None
-		self.eventCooldown_max = 10
+		self.eventCooldown_max = 30
 		self.eventCooldown_current = self.eventCooldown_max
 
 		self.bulletGroup: pygame.sprite.Group[Bullet] = pygame.sprite.Group()
@@ -88,8 +98,29 @@ class Game():
 
 		self.time = 0
 
+		# Channels: 
+		# 0 -> game music, 1 -> menu music, 2 -> experience orb pickup sound, 3 -> enemy hit sound, 
+		# 4 -> player hit sound, 5 -> popup window sounds, 6-8 -> bullet sounds
+		if pygame.get_init() and pygame.mixer.Channel(0).get_busy():
+			pygame.mixer.Channel(0).stop()
+
 		self.openMainMenu()
-	
+
+	def drawLoadingGif(self):
+		# Function to display the GIF
+		dirname = os.path.dirname(__file__)
+		filepath_loading_image = os.path.join(dirname, '../../assets/images/buttons/loading/')
+		loading_image_frame_files = sorted(glob.glob(filepath_loading_image+'loading_*.png'))
+		loading_image_frames = [pygame.image.load(frame_file).convert_alpha() for frame_file in loading_image_frame_files]
+		loading_image_frames = [pygame.transform.scale(frame, (int(frame.get_width() * 0.15), int(frame.get_height() * 0.15))) for frame in loading_image_frames]
+		while self.time == None:
+			for frame in loading_image_frames:
+				self.screen.blit(frame, (0, 0))
+				pygame.display.flip()
+				time.sleep(0.1)  # Adjust this to control the speed of the GIF
+				if self.time == 0:
+					break
+
 	def getStatBars(self):
 		health_bar = StatBar(
 			self.screen, 
@@ -196,11 +227,8 @@ class Game():
 		return eventlist	
 	
 	def setupPygameElements(self):
-		self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
+		self.setupPygameScreens()
 		pygame.display.set_caption("Epic roguelike game")
-		self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
-		self.traspscreen_hud = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
-		self.statbarlist = self.getStatBars()
 
 		# Set up inventory button:
 		dirname = os.path.dirname(__file__)
@@ -208,40 +236,119 @@ class Game():
 		inventory_image = pygame.image.load(filename+"/button_inventory.png").convert_alpha()
 		self.inventory_button = Button(15, 15, inventory_image, 0.2)
 
-	def openMainMenu(self):
-		if not pygame.get_init():
-			pygame.init()
-			self.setupPygameElements()
+		# Setting up channels and sounds
+		pygame.mixer.set_num_channels(12)
+		dirname = os.path.dirname(__file__)
+		filepath = os.path.join(dirname, '../../assets/audio/')
+		self.sounds: Dict[str, pygame.mixer.Sound] = {
+			'main_menu_music': pygame.mixer.Sound(filepath+'main_menu_music.mp3'),
+			'ingame_menu_music': pygame.mixer.Sound(filepath+'ingame_menu_music.mp3'),
+			'death_menu_music': pygame.mixer.Sound(filepath+'death_menu_music.mp3'),
+			'forest_music': pygame.mixer.Sound(filepath+'forest_music.mp3'),
+			'popupwindow_sound': pygame.mixer.Sound(filepath+'popupwindow_sound.wav'),
+			'experience_pickup_sound': pygame.mixer.Sound(filepath+'experience_pickup_sound.wav'),
+			'enemy_hit_sound': pygame.mixer.Sound(filepath+'enemy_hit_sound.wav'),
+			'player_hit_sound': pygame.mixer.Sound(filepath+'player_hit_sound.wav')
+		}
 
+	def setupPygameScreens(self):
+		self.screen = pygame.display.set_mode((self.settings.screen_width, self.settings.screen_height), pygame.HWSURFACE)
+		self.traspscreen = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+		self.traspscreen_hud = pygame.Surface((self.settings.screen_width, self.settings.screen_height), pygame.SRCALPHA)
+
+		self.sizeratio_x = self.settings.screen_width / self.settings.fullscreen_width
+		self.sizeratio_y = self.settings.screen_height / self.settings.fullscreen_height
+		x = (self.settings.fullscreen_width - self.settings.screen_width) // 2
+		y = (self.settings.fullscreen_height - self.settings.screen_height) // 2
+		os.environ['SDL_VIDEO_WINDOW_POS'] = f"{x},{y}"
+
+		self.player.position = pygame.Vector2(self.settings.screen_width/2, self.settings.screen_height/2)
+		self.player.rect = pygame.Rect(self.player.position.x - self.player.radius, self.player.position.y - self.player.radius, self.player.width, self.player.height)
+		self.statbarlist = self.getStatBars()
+
+	def playSound(self, soundname, volume = 100, channel = 0, loop = 0):
+		if (channel == 0 and (not pygame.mixer.Channel(channel).get_busy())) or channel != 0:
+			pygame.mixer.Channel(channel).play(soundname, loop)	# "The music repeats indefinitely if this argument is set to -1."
+			pygame.mixer.Channel(channel).set_volume(volume)
+		else:
+			pygame.mixer.Channel(channel).unpause()
+
+	def stopSound(self, channel = 0):
+		if channel == 0:
+			pygame.mixer.Channel(channel).pause()
+		else:
+			pygame.mixer.Channel(channel).stop()
+
+	def openMainMenu(self):
+		self.stopSound()
+		self.playSound(self.sounds['main_menu_music'], self.settings.mastervolume * self.settings.musicvolume, 1, -1)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 		menu.state = "inMainMenu"
-		response, userdata = menu.openMainMenu(self.csrf_token, self.userdata)
+		response, userdata = menu.openMainMenu(self.csrf_token, self.sizeratio_x, self.sizeratio_y, self.userdata)
 		if response == "start game":
 			self.userdata = userdata
+			self.stopSound(1)
 			self.gameRun()
 		elif response == "exit":
 			self.running = False
 			pygame.quit()
 
-	def openInGameMenu(self):
+	def openInGameMenu(self, state = 'ingame'):
+		if state == 'ingame':
+			self.stopSound()
+			self.playSound(self.sounds['ingame_menu_music'], self.settings.mastervolume * self.settings.musicvolume, 1, -1)
+			pygame.mouse.set_cursor(pygame.cursors.arrow)
+		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
+		menu.state = state
+		response = menu.openInGameMenu(self.sizeratio_x, self.sizeratio_y, self.settings.mastervolume, self.settings.musicvolume, self.settings.gamesoundvolume)
+		if response[0] == "closed":
+			self.stopSound(1)
+			self.gameRun()
+		elif response[0] == "return to main menu":
+			self.openMainMenu()
+		elif response[0] == 'video setting':
+			self.settings.screen_width = self.settings.fullscreen_width if response[1]['width'] > self.settings.fullscreen_width else response[1]['width']
+			self.settings.screen_height = self.settings.fullscreen_height if response[1]['height'] > self.settings.fullscreen_height else response[1]['height']
+			self.setupPygameScreens()
+			for weapon in self.weaponlist:
+				if weapon.name != 'Attack Drone' and weapon.name != 'Energy Orb' and weapon.name != 'Homing Arrow':
+					weapon.position = pygame.Vector2(self.player.position.x, self.player.position.y)
+					weapon.position_original = pygame.Vector2(weapon.position.x, weapon.position.y)
+					weapon.rect = pygame.Rect(weapon.position.x, weapon.position.y, weapon.width, weapon.height)
+			self.openInGameMenu('options')
+		elif response[0] == 'audio setting':
+			self.settings.mastervolume = response[1]
+			self.settings.musicvolume = response[2]
+			self.settings.gamesoundvolume = response[3]
+			for i in range(12):
+				if i < 2:
+					pygame.mixer.Channel(i).set_volume(self.settings.mastervolume * self.settings.musicvolume)
+				else:
+					pygame.mixer.Channel(i).set_volume(self.settings.mastervolume * self.settings.gamesoundvolume)
+
+			self.openInGameMenu('options')
+
+
+	def openInventoryMenu(self):
+		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
+	
+	def openItemListMenu(self):
+		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
-		menu.state = "ingame"
-		response = menu.openInGameMenu()
-		if response == "closed":
+		menu.state = "inventory"
+		response = menu.openItemListMenu(self.sizeratio_x, self.sizeratio_y, self.passivelist, self.weaponlist, self.player_passives, self.player_weapons)
+		if response == 'Resume game':
 			self.gameRun()
-		elif response == "return to main menu":
-			self.openMainMenu()
-	
-	def openInventoryMenu(self):
-		print("epic")
 
 	def openDeathMenu(self):
+		self.stopSound()
+		self.playSound(self.sounds['death_menu_music'], self.settings.mastervolume * self.settings.musicvolume, 1, -1)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 		menu.state = "playerdead"
-		response, userdata = menu.openDeathMenu(self.userdata, int(round(self.gamescore)), self.csrf_token)
+		response, userdata = menu.openDeathMenu(self.sizeratio_x, self.sizeratio_y, self.userdata, int(round(self.gamescore)), self.csrf_token)
 		if response == "exit":
 			self.running = False
 			pygame.quit()
@@ -256,12 +363,13 @@ class Game():
 			)
 
 	def openSelectWeaponMenu(self):
+		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		weaponlist = self.getRandomWeapons()
 		if len(weaponlist) > 0:
 			menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 			menu.state = "weapon_selector"
-			response, weapon = menu.openItemSelectorMenu(weaponlist)
+			response, weapon = menu.openItemSelectorMenu(self.sizeratio_x, self.sizeratio_y, weaponlist)
 			if isinstance(weapon, Weapon):
 				#self.writeOnScreen(weapon.name, 0, 200)
 				weapon.upgradeItem(self.player, 1)
@@ -293,13 +401,14 @@ class Game():
 		return upgradeableWeapons
 	
 	def openLevelUpMenu(self, n = 1):
+		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		for i in range(n):
 			passivelist = self.getRandomPasives()
 			if len(passivelist) > 0:
 				menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height)
 				menu.state = "passive_selector"
-				response = menu.openItemSelectorMenu(passivelist)
+				response = menu.openItemSelectorMenu(self.sizeratio_x, self.sizeratio_y, passivelist)
 				if isinstance(response[1], Passive):
 					response[1].upgradeItem(self.player, 1)
 					if response[1] not in self.player_passives.values():
@@ -332,11 +441,11 @@ class Game():
 			return list(selected_passives)
 		return upgradeablePassives
 
-	
 	def gameRun(self):
 		#pygame.init()
 		pygame.mouse.set_cursor(pygame.cursors.broken_x)
 		self.getBackgroundImage()
+		self.playSound(self.sounds['forest_music'], self.settings.mastervolume * self.settings.musicvolume, 0, -1)
 
 		clock = pygame.time.Clock()
 		self.running = True
@@ -378,10 +487,22 @@ class Game():
 			self.updateEventTimer()
 
 			#self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
-			#self.writeOnScreen(str(self.lastsecond), 300, 300)
 			self.drawHUDElements()
 			
 			self.checkKeysPressed() # Update background position based on player movement
+
+			if self.scoreboardupdate_cooldown > 0:
+				self.scoreboardupdate_cooldown -= self.dt
+			else:
+				self.scoreboardupdate_cooldown = 10
+				self.request.make_async_request()
+			
+			
+			with self.request.data_lock:
+				if self.request.fetched_data is not None:
+					if self.request.fetched_data['status'] == 'success':
+						self.scoreboard: List[Dict[str, Union[str, int]]] = self.request.fetched_data['scoreboard']
+						self.request.fetched_data = None
 
 			if self.current_event == None:
 				if self.eventCooldown_current > 0:
@@ -398,7 +519,7 @@ class Game():
 				self.updateGameScore('second passed')
 				self.lastsecond = round(self.time)//1
 		
-		pygame.quit()
+		#pygame.quit()
 
 	def drawPlayer(self):
 		#pygame.draw.rect(self.screen, "blue", self.player.rect)
@@ -444,6 +565,15 @@ class Game():
 
 		# Draw Stat boxes like exp bar, health bar, barrier bar:
 		self.drawStatBoxes()
+
+		# Draw the first five users in the scoreboard:
+		if self.scoreboard:
+			scoreboard = self.scoreboard[:5] if len(self.scoreboard) > 5 else self.scoreboard
+			scoreboard_rect = pygame.Rect(15, 390, font.size('aaaaaaaaaa: 999999 points.')[0] + 10, 110 + font.get_linesize()/2)
+			pygame.draw.rect(self.screen, (10, 43, 57), scoreboard_rect, 0, 5)
+			pygame.draw.rect(self.screen, 'cyan', scoreboard_rect, 4, 5)
+			for i, user in enumerate(scoreboard):
+				self.writeOnScreen(str(i+1)+'. '+str(user['player_name'])+': '+str(user['score'])+' points.', 20, 400 + 20 * i, 'white')
 	
 	def drawStatBoxes(self):
 		for bar in self.statbarlist:
@@ -523,6 +653,14 @@ class Game():
 			if self.running:
 				self.openInGameMenu()
 
+		if keys[pygame.K_e]:
+			if self.running:
+				self.openInventoryMenu()
+
+		if keys[pygame.K_i]:
+			if self.running:
+				self.openItemListMenu()
+
 	def updateGameScore(self, event: str, obj: Union[Enemy, Experience] = None):
 		if event == 'enemy killed':
 			self.gamescore += 100 * obj.level
@@ -566,6 +704,7 @@ class Game():
 					if self.player.status_effects["dodge count"] > 0 and random.random() >= 0.75:
 						self.player.status_effects["dodge count"] -= 1
 					else:
+						self.playSound(self.sounds['player_hit_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 4)
 						damageperc = 1
 						for weaponname, attr in [(weaponname, attr) for weaponname, attr in enemy.status_effects.items() if weaponname in self.player_weapons.keys()]:
 							weapon = self.player_weapons[weaponname]
@@ -588,14 +727,22 @@ class Game():
 		
 		for exp in self.experienceGroup:
 			if pygame.sprite.collide_circle(exp, self.player):
-				self.player.experience_queue += int(exp.value)
+				bonus = 1
+				if 'Enhanced Wisdom' in self.player_passives.keys():
+					bonus += self.player_passives['Enhanced Wisdom'].value
+				self.player.experience_queue += int(exp.value * bonus)
 				self.updateGameScore('exp picked up', exp)
+				self.playSound(self.sounds['experience_pickup_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 2)
 				exp.kill()
 		
 		return None
 
 	def damageEnemy(self, bullet: Bullet, enemy: Enemy):
 		weapon = self.player_weapons[bullet.weaponname]
+		if enemy.hitSoundCooldown <= 0:
+			if len([enemy for enemy in self.EnemyGroup if enemy.hitSoundCooldown > 0]) < 5:
+				self.playSound(self.sounds['enemy_hit_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 3)
+				enemy.hitSoundCooldown = 0.5
 		if bullet.weaponname == "Damaging Field" or bullet.weaponname == 'Laser Beam':
 			if enemy.hitCooldown <= 0:
 				#self.writeOnScreen(str(enemy.status_effects[weapon.name]), bullet.position.x, bullet.position.y)
@@ -707,11 +854,11 @@ class Game():
 			self.ItemGroup.add(kit)
 
 		if chance < 0.25 and enemy.type == "miniboss":
-			e = Experience(enemy.position, 20, "purple", enemy.level * 5000)
+			e = Experience(enemy.position, 20, "purple", enemy.level * 1000)
 		elif (chance < 1/3 and enemy.type == "brute") or ( chance < 0.9 and enemy.type == "miniboss") or enemy.event_type == 'chase':
-			e = Experience(enemy.position, 16, "orange", enemy.level * 1000)
+			e = Experience(enemy.position, 16, "orange", enemy.level * 200)
 		elif chance < 0.2 or enemy.type == "brute" or enemy.type == "miniboss":
-			e = Experience(enemy.position, 12, "yellow", enemy.level * 100)
+			e = Experience(enemy.position, 12, "yellow", enemy.level * 50)
 		else:
 			e = Experience(enemy.position, 8, "white", enemy.level * 20)
 
@@ -842,6 +989,9 @@ class Game():
 				enemy.hitCooldown -= self.dt
 			else:
 				enemy.colour = enemy.fixedcolour
+
+			if enemy.hitSoundCooldown > 0:
+				enemy.hitSoundCooldown -= self.dt
 
 			if slowness != 1:
 				enemy.colour = (125, 0, 64)
@@ -1014,7 +1164,7 @@ class Game():
 					if len(weapon.bullets) < (weapon.level + 1):
 						weapon.bullets.empty()
 						weapon.rotation = -360 / (weapon.level + 1)
-						for ball in range(weapon.level + 1):
+						for _ in range(weapon.level + 1):
 							weapon.rotation += 360 / (weapon.level + 1)
 
 							bullet_pos = pygame.Vector2(weapon.position.x, weapon.position.y)
@@ -1043,6 +1193,13 @@ class Game():
 					else:
 						bullet_pos_destination = pygame.Vector2(weapon.position_destination.x, weapon.position_destination.y)
 						b = Bullet(weapon.name, bullet_pos, bullet_pos_original, bullet_pos_destination, weapon.bulletLifeTime, weapon.damage, weapon.pierce, self.getCrit(), "bullet", weapon.size)
+						if weapon.name != 'Homing Arrow' and weapon.name != 'Laser Beam':
+							channel = 6
+							while channel < 11 and pygame.mixer.Channel(channel).get_busy():
+								channel += 1
+							if channel < 11:
+								if weapon.sound:
+									self.playSound(weapon.sound, self.settings.mastervolume * self.settings.gamesoundvolume, channel)
 					weapon.setOnCooldown()
 					if "angled" in weapon.pattern:
 						b.addAnimationRotation(0)
@@ -1155,7 +1312,9 @@ class Game():
 						pygame.draw.line(self.screen, "yellow", (bullet.position.x, bullet.position.y), (bullet.position_destination.x, bullet.position_destination.y), weapon.size)
 					pygame.draw.line(self.screen, weapon.colour, (bullet.position.x, bullet.position.y), (bullet.position_destination.x, bullet.position_destination.y), weapon.size - 5)
 					if weapon.level == 5:
-						pygame.draw.line(self.screen, "red", (bullet.position.x, bullet.position.y), (bullet.position_destination.x, bullet.position_destination.y), weapon.size - 15)
+						animation = round(-weapon.bulletLifeTime * 8 / weapon.bulletLifeTime**2 * (weapon.bulletLifeTime/2 - bullet.lifeTime)**2 + 8)
+						self.writeOnScreen(str(animation), mouse_pos.x, mouse_pos.y)
+						pygame.draw.line(self.screen, "red", (bullet.position.x, bullet.position.y), (bullet.position_destination.x, bullet.position_destination.y), weapon.size - 20 + animation)
 
 					# for point in bullet.points:
 					# 	pygame.draw.line(self.screen, "black", point, point, 1)

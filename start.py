@@ -20,13 +20,14 @@ try:
 except requests.ConnectionError:
     print("Failed to connect to the Django server.")
 
-game1 = Game(csrf_token)
+game1 = Game()
 game1.gameStart(
 	difficulty = "normal",
 	speed = "normal", 
 	fps = 60, 
 	screen_width = screeninfo.get_monitors()[0].width,
-	screen_height = screeninfo.get_monitors()[0].height
+	screen_height = screeninfo.get_monitors()[0].height,
+    csrf_token = csrf_token
 	)
 
 # At the end of your script, make sure to terminate the server process

@@ -83,7 +83,7 @@ class PlayerCharacter(GameObject):
 		self.setStats()
 		self.health_current = self.health_max
 		self.hitCooldown = 0
-		self.experience_max: int = 500
+		self.experience_max: int = 1000
 		self.experience_current: int = 0
 		self.experience_queue: int = 0
 	
@@ -108,7 +108,7 @@ class PlayerCharacter(GameObject):
 		while self.experience_queue > self.experience_max:
 			n += 1
 			self.experience_queue -= int(self.experience_max)
-			self.experience_max = int(round(self.experience_max * 1.2))
+			self.experience_max = int(round(self.experience_max * 1.1))
 		if self.experience_queue > 10:
 			self.experience_current += ((self.experience_queue // 100) + 10)
 			self.experience_queue -= ((self.experience_queue // 100) + 10)
@@ -118,7 +118,7 @@ class PlayerCharacter(GameObject):
 		if self.experience_current >= self.experience_max:
 			n += 1
 			self.experience_current -= int(self.experience_max)
-			self.experience_max = int(round(self.experience_max * 1.2))
+			self.experience_max = int(round(self.experience_max * 1.1))
 		self.level += n
 		self.setStats()
 		return n
@@ -156,7 +156,7 @@ class Passive():
 		self.radius = radius
 		self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.radius * 2, self.radius * 2)
 	
-	def upgradeItem(self, player: PlayerCharacter, amount = 1):
+	def upgradeItem(self, player: PlayerCharacter, amount = 1, noTest = True):
 		for i in range(amount):
 			if self.level < 5:
 				self.level += 1
@@ -165,20 +165,24 @@ class Passive():
 				if self.level > 1:
 					self.value += 5
 					self.cooldown_max -= 1
-				player.updateStatusEffects(self.value, "health regen")
+				if noTest:
+					player.updateStatusEffects(self.value, "health regen")
 			
 			if self.name == "Protective Barrier":
 				if self.level > 1:
 					self.value += 5
 					self.cooldown_max -= 1
-				player.updateStatusEffects(self.value, "barrier")
+				if noTest:
+					player.updateStatusEffects(self.value, "barrier")
 
 			if self.name == "Greater Strength":
 				if self.level > 1:
 					self.value += 0.05
-					player.updateStatusEffects(self.value, "damage percentage", self.name)
+					if noTest:
+						player.updateStatusEffects(self.value, "damage percentage", self.name)
 				if self.level == 5:
-					player.updateStatusEffects(1, "damage flat", self.name)
+					if noTest:
+						player.updateStatusEffects(1, "damage flat", self.name)
 
 			if self.name == "Dodge":
 				if self.level > 1:
@@ -193,24 +197,41 @@ class Passive():
 				if self.level > 1:
 					self.value += 5
 					self.count += 1
-				player.updateStatusEffects(self.value, "gunslinger")
+				if noTest:
+					player.updateStatusEffects(self.value, "gunslinger")
 
 			if self.name == "Berserk":
 				if self.level > 1:
 					self.value += 0.2
-				player.updateStatusEffects(self.value, "damage percentage", self.name)
+				if noTest:
+					player.updateStatusEffects(self.value, "damage percentage", self.name)
 			
 			if self.name == "Greater Vitality":
 				if self.level > 1:
 					self.value += 25
-				player.updateStatusEffects(self.value, "health flat", self.name)
+				if noTest:
+					player.updateStatusEffects(self.value, "health flat", self.name)
 				if self.level == 5:
-					player.updateStatusEffects(0.2, "health percentage", self.name)
+					if noTest:
+						player.updateStatusEffects(0.2, "health percentage", self.name)
 			
 			if  self.name == "Slowing Aura":
 				if self.level > 1:
 					self.value += 0.1
-				self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
+				if noTest:
+					self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
+
+			if self.name == 'Enhanced Wisdom':
+				if self.level > 1:
+					self.value += 0.08
+	
+	def getUpgradeValues(self, player):
+		tempValue, tempCooldown = self.value, self.cooldown_max
+		self.upgradeItem(player, 1, False)
+		self.level -= 1
+		diffValue, diffCooldown = self.value - tempValue, self.cooldown_max - tempCooldown
+		self.value, self.cooldown_max = tempValue, tempCooldown
+		return diffValue, diffCooldown
 
 	def getDescription(self):
 		dirname = os.path.dirname(__file__)
@@ -312,6 +333,13 @@ class Weapon(GameObject):
 		self.position_destination = pygame.Vector2(0,0)
 		self.animation: bool = False
 		self.description = self.getDescription()
+
+		dirname = os.path.dirname(__file__)
+		filename = os.path.join(dirname, '../../assets/audio/'+self.name+' Sound.wav')
+		if os.path.isfile(filename):
+			self.sound = pygame.mixer.Sound(filename)
+		else:
+			self.sound = None
 
 		self.loadImages()
 	
@@ -521,6 +549,7 @@ class Enemy(GameObject):
 		self.targetable = targetable
 		
 		self.hitCooldown = 0
+		self.hitSoundCooldown: float = 0
 
 
 	def setStatusDict(self, weaponlist: List[Weapon]):

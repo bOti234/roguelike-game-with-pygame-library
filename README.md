@@ -305,6 +305,24 @@ Github repository for the second assignment of Programming II.
 
 -Finished mechanics, adjusted balance and finished design of energy sword.
 
+### Update v1.4.0
+
+-Added sounds and music to the game. Currently the main, ingame and death menus, and the map as music, some weapons, enemies, the player and experience has sounds.
+
+-Added audio settings to the ingame menu. There are 3 sliders, that can control the main, music and gamesounds volume respecively.
+
+-Added video settings to the game. There is a dropdown button where the user can choose from several resolution options. The game's window goes in the center, once resized.
+
+-Resized all images so that all of them in the same category have the same size.
+
+-Added an itemlist menu, where the player can check all of the weapons' and passives' descriptions and if they own it already or not.
+
+-Added auto update of the scoreboard to the game. Every few seconds it requests the server and updates the ingame list.
+
+-Added loading gif to the first few seconds of starting the program.
+
+-Started working on resizing everything based on the window size. Currently all menus are done with all of their buttons. HUD elements, bullets, weapons, enemies and player is left.
+
 ## TODO list:
 
 -Making the design of the selectors better (e.g., fixing image sizes, positions, making letters larger, creating borders for the boxes, other colours)
@@ -333,8 +351,6 @@ Github repository for the second assignment of Programming II.
 
 -Cleaning up settings.py
 
--Implementing that a maximum of 5 weapons can be equipped by the player.
-
--Adding minibosses, bosses, and events (kinda like a quick time event, where you have to dodge a bunch of enemies or projectiles) to the game.
+-Adding bosses to the game.
 
 There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)
