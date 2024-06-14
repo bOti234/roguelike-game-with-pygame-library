@@ -5,14 +5,19 @@ from .gameobject import PlayerCharacter, Weapon, Passive
 from ..utils.database import fetch_user, submit_new_user, submit_logout, submit_update_user, submit_score
 
 class HUD():
-	def __init__(self, screen, screen_width, screen_height):
+	def __init__(self, screen, screen_width, screen_height, test = None):
 		self.screen: pygame.Surface = screen
 		self.screen_width = screen_width
 		self.screen_height = screen_height
 
+		if test is not None:
+			self.test = test
+		else:
+			self.test = {'mode': False, 'data': None}
+
 class StatBar(HUD):
-	def __init__(self, screen, screen_width, screen_height, stat_type, x, y, width, height, stat_background_rgba, trasparent_screen, border_width, border_radius, stat_colour, border_colour = "black"):
-		super().__init__(screen, screen_width, screen_height)
+	def __init__(self, screen, screen_width, screen_height, stat_type, x, y, width, height, stat_background_rgba, trasparent_screen, border_width, border_radius, stat_colour, border_colour = "black", test = None):
+		super().__init__(screen, screen_width, screen_height, test)
 		self.stat_type = stat_type
 		self.border_rect = pygame.rect.Rect(x, y, width, height)
 		self.stat_rect = pygame.rect.Rect(x + border_width, y + border_width, width - border_width*2, height - border_width*2)
@@ -22,6 +27,13 @@ class StatBar(HUD):
 		self.border_width = border_width
 		self.border_radius = border_radius
 		self.stat_colour = stat_colour
+
+	# def __eq__(self, other):
+	# 	if not isinstance(other, StatBar):
+	# 		return 'Error, class mismatch'
+	# 	if self.stat_type == other.stat_type:
+	# 		return True
+	# 	return False
 
 	def draw(self, newWidth):
 		self.stat_rect.width = newWidth
@@ -37,8 +49,8 @@ class Inventory(HUD):
 		pass
 
 class Menu(HUD):
-	def __init__(self, screen, screen_width, screen_height):
-		super().__init__(screen, screen_width, screen_height)
+	def __init__(self, screen, screen_width, screen_height, test = None):
+		super().__init__(screen, screen_width, screen_height, test)
 		self.opened = False
 		self.state = None
 
@@ -212,6 +224,9 @@ class Menu(HUD):
 
 				pygame.display.update()
 
+				if self.test['mode']:
+					return ('test', userdata)
+
 			if logchange:
 				return self.openMainMenu(csrf_token, userdata)
 
@@ -285,14 +300,18 @@ class Menu(HUD):
 						self.state = "ingame"
 
 				if self.state == 'video settings':
-					video_dropdown.draw(self.screen)
-
-					if apply_button.draw(self.screen):
+					if video_dropdown.draw(self.screen):
 						run = False
 						return ('video setting', video_dropdown.chosen_option)
 
-					if back_button.draw(self.screen):
-						self.state = "options"
+					if not video_dropdown.clicked:
+						if apply_button.draw(self.screen):
+							run = False
+							return ('video setting final', video_dropdown.chosen_option)
+
+						if back_button.draw(self.screen):
+							self.state = "options"
+							return ('video setting final', {'width':self.screen_width, 'height':self.screen_height})
 
 				if self.state == 'audio settings':
 					mouse_pos = pygame.mouse.get_pos()
@@ -326,6 +345,9 @@ class Menu(HUD):
 						run = False
 
 				pygame.display.update()
+
+				if self.test['mode']:
+					return 'test'
 
 	def openItemListMenu(self, sizeratio_x, sizeratio_y, passivelist: List[Passive], weaponlist: List[Weapon], player_passivelist: Dict[str,Passive], player_weaponlist: Dict[str,Weapon]):
 		if pygame.get_init():
@@ -419,6 +441,9 @@ class Menu(HUD):
 						run = False
 
 				pygame.display.update()
+
+				if self.test['mode']:
+					return 'test'
 
 					
 	
@@ -573,6 +598,9 @@ class Menu(HUD):
 
 				pygame.display.update()
 
+				if self.test['mode']:
+					return ('test', userdata)
+
 			if logchange:
 				return self.openDeathMenu(userdata, gamescore, csrf_token)
 	
@@ -627,6 +655,9 @@ class Menu(HUD):
 						run = False
 
 				pygame.display.update()
+
+				if self.test['mode']:
+					return ('test', itemlist[0])
 
 class Button():
 	def __init__(self, x, y, image: Union[pygame.Surface, List[Union[pygame.font.Font, str, pygame.Rect]]], scale):
@@ -887,7 +918,8 @@ class Dropdown():
 		self.clicked = False
 		self.timeout = 5
 
-		self.chosen_option = self.options[0]
+		current_res = [item for item in self.options if item['width'] == screen_width and item['height'] == screen_height]
+		self.chosen_option = self.options[0] if len(current_res) == 0 else current_res[0]
 
 		self.buttonstates = {
 			True:"red",
@@ -907,6 +939,7 @@ class Dropdown():
 				if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
 					self.timeout = 5
 					self.clicked = True
+					return False
 
 			elif self.options_rect.collidepoint(pos):
 				if pygame.mouse.get_pressed()[0] == 1 and self.clicked == True:
@@ -914,11 +947,13 @@ class Dropdown():
 					self.chosen_option = self.options[int(option_step)]
 					self.timeout = 5
 					self.clicked = False
+					return True
 
 			else:
 				if pygame.mouse.get_pressed()[0] == 1 and self.clicked == True:
 					self.timeout = 5
 					self.clicked = False
+					return False
 
 		else:
 			if pygame.mouse.get_pressed()[0] == 0:
