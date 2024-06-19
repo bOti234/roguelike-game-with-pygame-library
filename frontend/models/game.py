@@ -23,7 +23,7 @@ class Game():
 		self.difficultylist: List[str] = ["easy","normal","hard"]
 		self.speedlist: List[str] = ["slow","normal","fast"]
 
-	@staticmethod
+	@staticmethod	# This is a really cool decorator and I should've used it more in this project
 	def get_instance():       # Setting and returning the Game instance
 		if Game.singleton_instance is None:
 			Game.singleton_instance = Game()
@@ -58,7 +58,7 @@ class Game():
 			screen_height = screen_height,
 			game_size = 40
 			)
-		player_radius = 40 # With this only the map will be affected by game size                     #self.settings.game_size    # Bit unnecesary
+		player_radius = 40
 		player_position: pygame.Vector2 = pygame.Vector2(self.settings.screen_width / 2, self.settings.screen_height / 2)
 		self.player = PlayerCharacter(player_radius, player_position, 200, self.settings.speed)
 		self.background: pygame.Vector2  = pygame.Vector2(self.player.position.x, self.player.position.y)
@@ -73,6 +73,7 @@ class Game():
 		self.request.make_async_request()
 
 		self.time = None
+		self.running = False
 
 		# Initializing pygame
 		if not pygame.get_init():
@@ -411,7 +412,8 @@ class Game():
 			)
 
 	def openSelectWeaponMenu(self):
-		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
+		volume = 0 if self.test['mode'] else self.settings.mastervolume * self.settings.gamesoundvolume
+		self.playSound(self.sounds['popupwindow_sound'], volume, 5)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		weaponlist = self.getRandomWeapons()
 		if len(weaponlist) > 0:
@@ -451,7 +453,8 @@ class Game():
 		return upgradeableWeapons
 	
 	def openLevelUpMenu(self, n = 1):
-		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
+		volume = 0 if self.test['mode'] else self.settings.mastervolume * self.settings.gamesoundvolume
+		self.playSound(self.sounds['popupwindow_sound'], volume, 5)
 		pygame.mouse.set_cursor(pygame.cursors.arrow)
 		for i in range(n):
 			passivelist = self.getRandomPasives()
@@ -568,6 +571,9 @@ class Game():
 			if self.lastsecond < round(self.time)//1:
 				self.updateGameScore('second passed')
 				self.lastsecond = round(self.time)//1
+
+			if self.test['mode']:
+				break
 		
 		#pygame.quit()
 
@@ -592,7 +598,6 @@ class Game():
 			seconds = 0
 			minutes += 1
 		time_text = str(minutes)+":"+str(seconds)
-		print(time_text)
 		time_box = pygame.Rect(self.settings.screen_width/2 - font.size("999:99")[0]/2, 8, font.size("999:99")[0] + 10, font.get_linesize() + 5)
 		pygame.draw.rect(self.screen, "skyblue", time_box, 0, 15)
 		pygame.draw.rect(self.screen, "black", time_box, 3, 15)
@@ -600,7 +605,6 @@ class Game():
 		
 		# Draw Score box:
 		score_text = str(int(round(self.gamescore)))
-		print(score_text)
 		box_width = font.size("99999999")[0] if font.size("99999999")[0] > font.size(score_text)[0] else font.size(score_text)[0]
 		score_box = pygame.Rect(self.settings.screen_width/2 - box_width/2, 40, box_width + 10, font.get_linesize() + 5)
 		pygame.draw.rect(self.screen, (10, 43, 57), score_box, 0, 15)
@@ -672,35 +676,38 @@ class Game():
 		self.screen.blit(self.backgroundimage, (self.background.x - image_rect.width * (0 + steps_x), self.background.y - image_rect.height * (0 + steps_y)))
 	
 	def checkKeysPressed(self, rate = 1):
-		keys = pygame.key.get_pressed()
-		#gate = self.notTouchingBorder()
+		if self.test['mode']:
+			keys = self.test['data']
+		else:
+			keys = pygame.key.get_pressed()
+
 		if self.running:
-			if keys[pygame.K_w]:# and "up" not in gate:
+			if keys[pygame.K_w]:
 				self.background.y += self.player.speed * self.dt * rate
 
-			if keys[pygame.K_s]:# and "down" not in gate:
+			if keys[pygame.K_s]:
 				self.background.y -= self.player.speed * self.dt * rate
 
-			if keys[pygame.K_a]:# and "left" not in gate:
+			if keys[pygame.K_a]:
 				self.background.x += self.player.speed * self.dt * rate
 
-			if keys[pygame.K_d]:# and "right" not in gate:
+			if keys[pygame.K_d]:
 				self.background.x -= self.player.speed * self.dt * rate
 
 			if [keys[pygame.K_w], keys[pygame.K_a], keys[pygame.K_s], keys[pygame.K_d]].count(True) == 2:
-				if keys[pygame.K_w] and keys[pygame.K_a]:# and "up" not in gate and "left" not in gate:
+				if keys[pygame.K_w] and keys[pygame.K_a]:
 					self.background.y += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 					self.background.x += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-				if keys[pygame.K_w] and keys[pygame.K_d]:# and "up" not in gate and "right" not in gate:
+				if keys[pygame.K_w] and keys[pygame.K_d]:
 					self.background.y += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 					self.background.x -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-				if keys[pygame.K_s] and keys[pygame.K_a]:# and "down" not in gate and "left" not in gate:
+				if keys[pygame.K_s] and keys[pygame.K_a]:
 					self.background.y -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 					self.background.x += self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-				if keys[pygame.K_s] and keys[pygame.K_d]:# and "down" not in gate and "right" not in gate:
+				if keys[pygame.K_s] and keys[pygame.K_d]:
 					self.background.y -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 					self.background.x -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
@@ -716,7 +723,7 @@ class Game():
 			if self.running:
 				self.openItemListMenu()
 
-	def updateGameScore(self, event: str, obj: Union[Enemy, Experience] = None):
+	def updateGameScore(self, event: str, obj: Union[Enemy, Experience, None] = None):
 		if event == 'enemy killed':
 			self.gamescore += 100 * obj.level
 		elif event == 'second passed':
@@ -725,7 +732,7 @@ class Game():
 			self.gamescore += 1 + obj.value//100
 
 	def checkHitboxes(self):
-		#self.writeOnScreen(str(self.player.position.x)+" "+str(self.player.position.y), self.player.position.x, self.player.position.y)
+		volume = 0 if self.test['mode'] else self.settings.mastervolume * self.settings.gamesoundvolume
 		for item in self.ItemGroup:
 			if pygame.sprite.collide_rect(item, self.player):   # This is the best feature ever, although, my player is a circle and the boxes are squares...
 				item.kill()
@@ -759,7 +766,7 @@ class Game():
 					if self.player.status_effects["dodge count"] > 0 and random.random() >= 0.75:
 						self.player.status_effects["dodge count"] -= 1
 					else:
-						self.playSound(self.sounds['player_hit_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 4)
+						self.playSound(self.sounds['player_hit_sound'], volume, 4)
 						damageperc = 1
 						for weaponname, attr in [(weaponname, attr) for weaponname, attr in enemy.status_effects.items() if weaponname in self.player_weapons.keys()]:
 							weapon = self.player_weapons[weaponname]
@@ -787,16 +794,18 @@ class Game():
 					bonus += self.player_passives['Enhanced Wisdom'].value
 				self.player.experience_queue += int(exp.value * bonus)
 				self.updateGameScore('exp picked up', exp)
-				self.playSound(self.sounds['experience_pickup_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 2)
+				self.playSound(self.sounds['experience_pickup_sound'], volume, 2)
 				exp.kill()
 		
 		return None
 
 	def damageEnemy(self, bullet: Bullet, enemy: Enemy):
+		volume = 0 if self.test['mode'] else self.settings.mastervolume * self.settings.gamesoundvolume
+
 		weapon = self.player_weapons[bullet.weaponname]
 		if enemy.hitSoundCooldown <= 0:
 			if len([enemy for enemy in self.EnemyGroup if enemy.hitSoundCooldown > 0]) < 5:
-				self.playSound(self.sounds['enemy_hit_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 3)
+				self.playSound(self.sounds['enemy_hit_sound'], volume, 3)
 				enemy.hitSoundCooldown = 0.5
 		if bullet.weaponname == "Damaging Field" or bullet.weaponname == 'Laser Beam':
 			if enemy.hitCooldown <= 0:
@@ -847,9 +856,9 @@ class Game():
 
 
 	def spawnWeaponKit(self):
-		if len([weapon for weapon in self.weaponlist if weapon.level < 5]) > 0:
+		if len(self.player_weapons) < 5 or len([weapon for weapon in self.player_weapons.values() if weapon.level < 5]) > 0:
 			if self.WeaponKitCooldown <= 0:
-				chance = random.random()
+				chance = 1 if self.test['mode'] else random.random()
 				if chance > 0.5:
 					randpos = pygame.Vector2(
 						random.randint(round(self.player.position.x + 250), round(self.player.position.x + 500)) * self.getSign(), 
@@ -867,7 +876,7 @@ class Game():
 	
 	def spawnMagnet(self):
 		if self.MagnetCooldown <= 0:
-			chance = random.random()
+			chance = 1 if self.test['mode'] else random.random()
 			if chance > 0.25:
 				randpos = pygame.Vector2(
 						random.randint(round(self.player.position.x + 250), round(self.player.position.x + 500)) * self.getSign(), 
@@ -891,8 +900,7 @@ class Game():
 
 					randangle = 360 * random.random()
 					randpos = pygame.Vector2(self.player.position.x + 1350 * math.sin(randangle * math.pi / 180), self.player.position.y + 1100 * math.cos(randangle * math.pi / 180))
-					enemy = Enemy(randpos, (self.time // 60) + 1)
-					enemy.setStatusDict(self.weaponlist)
+					enemy = Enemy(self.weaponlist, randpos, (self.time // 60) + 1)
 					self.EnemyGroup.add(enemy)
 					self.EnemyCooldown = 10         #TODO MAKE IT A SETTING/MODIFIER
 					if self.EnemyCooldown < 10:

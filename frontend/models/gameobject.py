@@ -523,7 +523,7 @@ class Weapon(GameObject):
 
 class Enemy(GameObject):
 
-	def __init__(self, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal", event_type = None, targetable = True):
+	def __init__(self, weaponlist, position: pygame.Vector2, level = 1, radius: float = 30, health: float = 30, colour = "red", damage: float = 10, speed: float = 10, weakness = "energy", type = "normal", event_type = None, targetable = True):
 		objtype = "enemy"
 		super().__init__(objtype, position, radius * 2, radius * 2)
 
@@ -551,9 +551,11 @@ class Enemy(GameObject):
 		self.hitCooldown = 0
 		self.hitSoundCooldown: float = 0
 
+		self.status_effects: Dict[str, Dict[str, Union[bool, float, int]]] = {}
+		self.setStatusDict(weaponlist)
+
 
 	def setStatusDict(self, weaponlist: List[Weapon]):
-		self.status_effects: Dict[str, Dict[str, Union[bool, float, int]]] = {}
 		for weapon in weaponlist:
 			self.status_effects.update({weapon.name:{"active":False, "duration":0.0}})
   
@@ -567,7 +569,7 @@ class Enemy(GameObject):
 					attr["duration"] -= dt
 
 class Experience(GameObject):
-	def __init__(self, position: pygame.Vector2, radius, colour, value):
+	def __init__(self, position: pygame.Vector2, radius = 8, colour = 'white', value = 20):
 		objtype = "experience"
 		width_and_height = radius * 2
 		super().__init__(objtype, position, width_and_height, width_and_height)

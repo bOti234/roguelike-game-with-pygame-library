@@ -332,3 +332,11 @@ Github repository for the second assignment of Programming II.
 -Separated and moved updates and todos, now they are in 'docs' folder.
 
 -Updated readme to a description and help for the game.
+
+### Update v1.4.2
+
+-Progressed with pytests, made the old ones faster and more efficient.
+
+-Added test features to someof the functions. Whenever a function would've called another function at it's end, when the test runs, this won't happen anymore.
+
+-Now every time a sound plays during test, it still plays, but it will be muted.

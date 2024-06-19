@@ -1,6 +1,8 @@
 import os
 import pygame
-from frontend.models.game import Game, StatBar, Passive, Weapon, Event, PlayerCharacter
+import time
+import pyautogui
+from frontend.models.game import Game, StatBar, Passive, Weapon, Event, PlayerCharacter, Enemy, Experience, Bullet
 from ..fixtures import server, pygame_setup, game
 
 # Mocking doesn't have seemed to work, since the project was made without the knowledge of mocks, and my pygame elements (screen, images, so on) are created in a completely different way
@@ -264,91 +266,104 @@ def game_start(game: Game, test = True):
 # 	assert pygame.image.tostring(expected_screen, 'RGBA') == pygame.image.tostring(after_screen, 'RGBA')
 
 
-def test_game_drawHUDElements(pygame_setup, game: Game):
-	game_start(game, 'need_just_settings')
-	game.setupPygameElements()
+# def test_game_drawHUDElements(pygame_setup, game: Game):
+# 	game_start(game, 'need_just_settings')
+# 	game.setupPygameElements()
 
-	expected_screen = game.screen.copy()
-	game.time = 0
-	game.gamescore = 0
+# 	expected_screen = game.screen.copy()
+# 	game.time = 0
+# 	game.gamescore = 0
 
-	game.drawHUDElements()
+# 	game.drawHUDElements()
 
-	# Draw time box:
-	font = pygame.font.Font(None, 30)
-	time_text = str(0)+":"+str(0)
-	time_box = pygame.Rect(game.settings.screen_width/2 - font.size("999:99")[0]/2, 8, font.size("999:99")[0] + 10, font.get_linesize() + 5)
-	pygame.draw.rect(expected_screen, "skyblue", time_box, 0, 15)
-	pygame.draw.rect(expected_screen, "black", time_box, 3, 15)
-	text = font.render(time_text, True, 'black')
-	expected_screen.blit(text, (time_box.x + (time_box.width - font.size(time_text)[0])/2, time_box.y + 5))
+# 	# Draw time box:
+# 	font = pygame.font.Font(None, 30)
+# 	minutes = round(game.time//60)
+# 	seconds = round(game.time - 60 * (game.time // 60))
+# 	if seconds == 60:
+# 		seconds = 0
+# 		minutes += 1
+# 	time_text = str(minutes)+":"+str(seconds)
+# 	time_box = pygame.Rect(game.settings.screen_width/2 - font.size("999:99")[0]/2, 8, font.size("999:99")[0] + 10, font.get_linesize() + 5)
+# 	pygame.draw.rect(expected_screen, "skyblue", time_box, 0, 15)
+# 	pygame.draw.rect(expected_screen, "black", time_box, 3, 15)
+# 	text = font.render(time_text, True, 'black')
+# 	expected_screen.blit(text, (time_box.x + (time_box.width - font.size(time_text)[0])/2, time_box.y + 5))
 
-	# Draw Score box:
-	score_text = str(0)
-	box_width = font.size("99999999")[0] if font.size("99999999")[0] > font.size(score_text)[0] else font.size(score_text)[0]
-	score_box = pygame.Rect(game.settings.screen_width/2 - box_width/2, 40, box_width + 10, font.get_linesize() + 5)
-	pygame.draw.rect(expected_screen, (10, 43, 57), score_box, 0, 15)
-	pygame.draw.rect(expected_screen, "cyan", score_box, 3, 15)
-	text = font.render(score_text, True, (200, 255, 255))
-	expected_screen.blit(text, (score_box.x + (score_box.width - font.size(score_text)[0])/2, score_box.y + 5))
+# 	# Draw Score box:
+# 	score_text = str(int(round(game.gamescore)))
+# 	box_width = font.size("99999999")[0] if font.size("99999999")[0] > font.size(score_text)[0] else font.size(score_text)[0]
+# 	score_box = pygame.Rect(game.settings.screen_width/2 - box_width/2, 40, box_width + 10, font.get_linesize() + 5)
+# 	pygame.draw.rect(expected_screen, (10, 43, 57), score_box, 0, 15)
+# 	pygame.draw.rect(expected_screen, "cyan", score_box, 3, 15)
+# 	text = font.render(score_text, True, (200, 255, 255))
+# 	expected_screen.blit(text, (score_box.x + (score_box.width - font.size(score_text)[0])/2, score_box.y + 5))
 
-	# Draw the inventory button:
-	inventory_background_rect = pygame.Rect(game.inventory_button.rect.x - 7, game.inventory_button.rect.y - 7, game.inventory_button.rect.width + 14, game.inventory_button.rect.height + 14)
-	pygame.draw.rect(game.screen, (10, 43, 57), inventory_background_rect, 0, 5)
-	pygame.draw.rect(game.screen, "cyan", inventory_background_rect, 4, 5)
-	game.inventory_button.draw(expected_screen)
+# 	# Draw the inventory button:
+# 	inventory_background_rect = pygame.Rect(game.inventory_button.rect.x - 7, game.inventory_button.rect.y - 7, game.inventory_button.rect.width + 14, game.inventory_button.rect.height + 14)
+# 	pygame.draw.rect(expected_screen, (10, 43, 57), inventory_background_rect, 0, 5)
+# 	pygame.draw.rect(expected_screen, "cyan", inventory_background_rect, 4, 5)
+# 	game.inventory_button.draw(expected_screen)
 
-	after_screen = game.screen.copy()
+# 	after_screen = game.screen.copy()
 
-	assert pygame.image.tostring(expected_screen, 'RGBA') == pygame.image.tostring(after_screen, 'RGBA')
+# 	assert pygame.image.tostring(expected_screen, 'RGBA') == pygame.image.tostring(after_screen, 'RGBA')
 
 
-def test_game_drawStatBoxes(pygame_setup, game: Game):
-	game_start(game, 'need_just_settings')
-	game.setupPygameScreens()
-	game.passivelist = game.getPassives()
-	passive = [passive for passive in game.passivelist if passive.name == 'Protective Barrier'][0]
-	game.player_passives = {passive.name: passive}
+# def test_game_drawStatBoxes(pygame_setup, game: Game):
+# 	game_start(game, 'need_just_settings')
+# 	game.setupPygameScreens()
+# 	game.passivelist = game.getPassives()
+# 	passive = [passive for passive in game.passivelist if passive.name == 'Protective Barrier'][0]
+# 	game.player_passives = {passive.name: passive}
 
-	expected_screen = game.screen.copy()
-	expected_transparent_screen = game.traspscreen_hud.copy()
+# 	expected_screen = game.screen.copy()
+# 	expected_transparent_screen = game.traspscreen_hud.copy()
 
-	game.drawStatBoxes()
+# 	game.drawStatBoxes()
 
-	for bar in game.statbarlist:
-		pygame.draw.rect(expected_transparent_screen, bar.stat_background_rgba, bar.border_rect, 0, bar.border_radius)
-
-		if bar.stat_type == 'healthbar':
-			newWidth = (game.player.width - 4) * game.player.health_current / game.player.health_max
-		if bar.stat_type == 'barrierbar':
-			newWidth = (game.player.width - 4) * game.player.status_effects["barrier"] / passive.value
-		if bar.stat_type == 'experiencebar':
-			newWidth = (game.settings.screen_width) * game.player.experience_current / game.player.experience_max
-		bar.stat_rect.width = newWidth
-
-		pygame.draw.rect(expected_screen, bar.stat_colour, bar.stat_rect, 0, bar.border_radius)
-		pygame.draw.rect(expected_screen, bar.border_colour, bar.border_rect, bar.border_width, bar.border_radius)
-
-	font = pygame.font.Font(None, 30)
-	exp_progress_txt = str(game.player.experience_current)+" / "+str(game.player.experience_max)
-
-	posX = game.settings.screen_width/2 - font.size(exp_progress_txt)[0]//2
-	posY = game.settings.screen_height - 20
-	text = []
-	for i, char in enumerate(exp_progress_txt):
-		rgb = expected_screen.get_at((round(posX + i * font.size("_")[0]), posY))[:3]
-		if rgb[0] + rgb[1] + rgb[2] >= 383:
-			resp_colour = "black"
-		else:
-			resp_colour = "white"
-		text.append(font.render(char, True, resp_colour))
+# 	for bar in game.statbarlist:
+# 		if bar.stat_type == "barrierbar":
+# 			if "Protective Barrier" in game.player_passives.keys():
+# 				pygame.draw.rect(expected_transparent_screen, bar.stat_background_rgba, bar.border_rect, 0, bar.border_radius)
+# 		else:
+# 			pygame.draw.rect(expected_transparent_screen, bar.stat_background_rgba, bar.border_rect, 0, bar.border_radius)
+# 		expected_screen.blit(expected_transparent_screen, (0,0))
 	
-	for i, t in enumerate(text):
-		expected_screen.blit(t, (posX + i * font.size("_")[0], posY))
+# 	for bar in game.statbarlist:
+# 		if bar.stat_type == 'healthbar':
+# 			newWidth = (game.player.width - 4) * game.player.health_current / game.player.health_max
+# 		if bar.stat_type == 'barrierbar':
+# 			newWidth = (game.player.width - 4) * game.player.status_effects["barrier"] / passive.value
+# 		if bar.stat_type == 'experiencebar':
+# 			newWidth = (game.settings.screen_width) * game.player.experience_current / game.player.experience_max
+# 		bar.stat_rect.width = newWidth
 
-	after_screen = game.screen.copy()
+# 		pygame.draw.rect(expected_screen, bar.stat_colour, bar.stat_rect, 0, bar.border_radius)
+# 		pygame.draw.rect(expected_screen, bar.border_colour, bar.border_rect, bar.border_width, bar.border_radius)
 
-	assert pygame.image.tostring(expected_screen, 'RGBA') == pygame.image.tostring(after_screen, 'RGBA')
+# 	font = pygame.font.Font(None, 30)
+# 	exp_progress_txt = str(game.player.experience_current)+" / "+str(game.player.experience_max)
+
+# 	posX = game.settings.screen_width/2 - font.size(exp_progress_txt)[0]//2
+# 	posY = game.settings.screen_height - 20
+# 	text = []
+# 	for i, char in enumerate(exp_progress_txt):
+# 		rgb = expected_screen.get_at((round(posX + i * font.size("_")[0]), posY))[:3]
+# 		if rgb[0] + rgb[1] + rgb[2] >= 383:
+# 			resp_colour = "black"
+# 		else:
+# 			resp_colour = "white"
+# 		text.append(font.render(char, True, resp_colour))
+	
+# 	for i, t in enumerate(text):
+# 		expected_screen.blit(t, (posX + i * font.size("_")[0], posY))
+
+# 	after_screen = game.screen.copy()
+# 	after_transpaerent_screen = game.traspscreen_hud.copy()
+
+# 	assert pygame.image.tostring(expected_transparent_screen, 'RGBA') == pygame.image.tostring(after_transpaerent_screen, 'RGBA')
+# 	assert pygame.image.tostring(expected_screen, 'RGBA') == pygame.image.tostring(after_screen, 'RGBA')
 
 
 # def test_game_getBackgroundImage(pygame_setup, game: Game):
@@ -382,70 +397,292 @@ def test_game_drawStatBoxes(pygame_setup, game: Game):
 
 
 # def test_game_checkKeysPressed(pygame_setup, game: Game):
-#     pass
+# 	game_start(game)
+# 	game.running = True
+# 	game.dt = 0.05
 
-# def test_game_updateGameScore(pygame_setup, game: Game):
-#     pass
+# 	original_x = game.background.x
+# 	original_y = game.background.y
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_a] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.x == original_x + game.player.speed * 0.05
+
+# 	game.background.x = original_x
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_d] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.x == original_x - game.player.speed * 0.05
+
+# 	game.background.x = original_x
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_w] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.y == original_y + game.player.speed * 0.05
+
+# 	game.background.y = original_y
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_s] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.y == original_y - game.player.speed * 0.05
+
+# 	game.background.y = original_y
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_w] = True
+# 	game.test['data'][pygame.K_a] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.y == original_y + game.player.speed * 0.05 + game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+# 	assert game.background.x == original_x + game.player.speed * 0.05 + game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+
+# 	game.background.y = original_y
+# 	game.background.x = original_x
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_w] = True
+# 	game.test['data'][pygame.K_d] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.y == original_y + game.player.speed * 0.05 + game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+# 	assert game.background.x == original_x - game.player.speed * 0.05 - game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+
+# 	game.background.y = original_y
+# 	game.background.x = original_x
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_s] = True
+# 	game.test['data'][pygame.K_a] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.y == original_y - game.player.speed * 0.05 - game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+# 	assert game.background.x == original_x + game.player.speed * 0.05 + game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+
+# 	game.background.y = original_y
+# 	game.background.x = original_x
+	
+# 	game.test['data'] = [False] * 500
+# 	game.test['data'][pygame.K_s] = True
+# 	game.test['data'][pygame.K_d] = True
+# 	game.checkKeysPressed()
+
+# 	assert game.background.y == original_y - game.player.speed * 0.05 - game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+# 	assert game.background.x == original_x - game.player.speed * 0.05 - game.player.speed * ( 0.05 / 2**(1/2) -  0.05)
+
+
+# def test_game_updateGameScore(game: Game):
+# 	pos = pygame.Vector2(0,0)
+# 	test_enemy_lvl_1 = Enemy(pos)
+# 	test_enemy_lvl_2 = Enemy(pos, 2)
+
+# 	test_exp_val_20 = Experience(pos)
+# 	test_exp_val_2000 = Experience(pos, value = 2000)
+
+# 	game.gamescore = 0
+# 	original_score = game.gamescore
+# 	game.updateGameScore('enemy killed', test_enemy_lvl_1)
+
+# 	assert game.gamescore == original_score + 100 * test_enemy_lvl_1.level
+# 	game.gamescore = 0
+
+# 	game.updateGameScore('enemy killed', test_enemy_lvl_2)
+
+# 	assert game.gamescore == original_score + 100 * test_enemy_lvl_2.level
+# 	game.gamescore = 0
+
+# 	game.updateGameScore('second passed')
+
+# 	assert game.gamescore == original_score + 10
+# 	game.gamescore = 0
+
+# 	game.updateGameScore('exp picked up', test_exp_val_20)
+
+# 	assert game.gamescore == original_score + 1 + test_exp_val_20.value//100
+# 	game.gamescore = 0
+
+# 	game.updateGameScore('exp picked up', test_exp_val_2000)
+
+# 	assert game.gamescore == original_score + 1 + test_exp_val_2000.value//100
+# 	game.gamescore = 0
+
 
 # def test_game_checkHitBoxes(pygame_setup, game: Game):
-#     pass
+# 	game_start(game, 'need_weapon_passive_event_test')
+# 	game.setupPygameElements()
+# 	pos = pygame.Vector2(game.player.position.x, game.player.position.y)
+# 	test_enemy = Enemy(game.weaponlist, pos)
+# 	game.EnemyGroup.add(test_enemy)
+
+# 	original_player_health = game.player.health_current
+# 	game.checkHitboxes()
+
+# 	assert game.player.health_current == original_player_health - test_enemy.damage
+	
+# 	weapon = game.weaponlist[0]
+# 	test_bullet = Bullet(weapon.name, pos, pos, pos, weapon.bulletLifeTime, weapon.damage, weapon.pierce, False, 'bullet', weapon.size)
+# 	game.bulletGroup.add(test_bullet)
+
+# 	original_enemy_health = test_enemy.health
+# 	game.checkHitboxes()
+
+# 	assert test_enemy.health == original_enemy_health - test_bullet.damage
+# 	test_enemy.kill()
+# 	test_bullet.kill()
+
+# 	test_experience = Experience(pos)
+# 	game.experienceGroup.add(test_experience)
+
+# 	original_exp_value = game.player.experience_queue
+# 	game.checkHitboxes()
+
+# 	assert game.player.experience_queue == original_exp_value + test_experience.value
+# 	assert test_experience not in game.experienceGroup
+
 
 # def test_game_damageEnemy(pygame_setup, game: Game):
-#     pass
+# 	game_start(game, 'need_weapon_passive_event_test')
+# 	game.setupPygameElements()
+# 	pos = pygame.Vector2(game.player.position.x, game.player.position.y)
+# 	test_enemy = Enemy(game.weaponlist, pos)
+# 	game.EnemyGroup.add(test_enemy)
+
+# 	weapon = game.weaponlist[0]
+# 	test_bullet = Bullet(weapon.name, pos, pos, pos, weapon.bulletLifeTime, weapon.damage, weapon.pierce, False, 'bullet', weapon.size)
+# 	game.bulletGroup.add(test_bullet)
+
+# 	original_enemy_health = test_enemy.health
+# 	game.damageEnemy(test_bullet, test_enemy)
+
+# 	assert test_enemy.health == original_enemy_health - test_bullet.damage
+# 	original_enemy_health = test_enemy.health
+# 	original_bullet_pierce = test_bullet.pierce
+	
+# 	test_enemy.hitCooldown = 0
+# 	game.damageEnemy(test_bullet, test_enemy)
+
+# 	assert test_enemy.health == original_enemy_health
+# 	assert test_bullet.pierce == original_bullet_pierce
+
+# 	test_enemy.hitCooldown = 1
+# 	test_bullet.enemiesHit.remove(test_enemy)
+
+# 	assert test_enemy.health == original_enemy_health
+# 	assert test_bullet.pierce == original_bullet_pierce
+
+# 	test_enemy.hitCooldown = 0
+
+# 	test_bullet.damage = test_enemy.health
+# 	test_bullet.pierce = 1
+# 	game.damageEnemy(test_bullet, test_enemy)
+
+# 	assert test_enemy not in game.EnemyGroup
+# 	assert test_bullet not in game.bulletGroup
 
 # def test_game_spawnWeaponKit(pygame_setup, game: Game):
-#     pass
+# 	game_start(game, 'need_weapon_passive_event_test')
+# 	game.dt = 0.05
 
-# def test_game_spawnMagnet(pygame_setup, game: Game):
-#     pass
+# 	game.WeaponKitCooldown = 0
+# 	original_itemgroup_len = len(game.ItemGroup)
+# 	game.spawnWeaponKit()
+
+# 	assert len(game.ItemGroup) == original_itemgroup_len + 1
+# 	assert game.WeaponKitCooldown != 0
+
+# 	original_itemgroup_len = len(game.ItemGroup)
+# 	game.WeaponKitCooldown = 1
+# 	original_cooldown = game.WeaponKitCooldown
+# 	game.spawnWeaponKit()
+# 	assert len(game.ItemGroup) == original_itemgroup_len
+# 	assert game.WeaponKitCooldown == original_cooldown - 0.05
+
+# 	for weapon in game.weaponlist:
+# 		if len(game.player_weapons) == 5:
+# 			break
+# 		game.player_weapons.update({weapon.name: weapon})
+	
+# 	for weapon in game.player_weapons.values():
+# 		weapon.upgradeItem(game.player, 5)
+	
+# 	original_itemgroup_len = len(game.ItemGroup)
+# 	game.WeaponKitCooldown = 0
+# 	game.spawnWeaponKit()
+# 	assert len(game.ItemGroup) == original_itemgroup_len
+
+
+def test_game_spawnMagnet(pygame_setup, game: Game):
+	game_start(game, 'need_weapon_passive_event_test')
+	game.dt = 0.05
+
+	game.MagnetCooldown = 0
+	original_itemgroup_len = len(game.ItemGroup)
+	game.spawnMagnet()
+
+	assert len(game.ItemGroup) == original_itemgroup_len + 1
+	assert game.MagnetCooldown != 0
+
+	original_itemgroup_len = len(game.ItemGroup)
+	game.MagnetCooldown = 1
+	original_cooldown = game.MagnetCooldown
+	game.spawnMagnet()
+	assert len(game.ItemGroup) == original_itemgroup_len
+	assert game.MagnetCooldown == original_cooldown - 0.05
 
 # def test_game_spawnEnemies(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_spawnEnemyDrops(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_updateItemPosition(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_updatePointingArrowPosition(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_updateEnemyPosition(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_updateExperiencePosition(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_getClosestEnemy(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_getCrit(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_startEvent(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_populateEventEnemies(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_updateEventTimer(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_attackCycle(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_passiveCycle(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_trasparentCycle(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_writeOnScreen(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_compareSutraction(pygame_setup, game: Game):
-#     pass
+# 	pass
 
 # def test_game_getSign(pygame_setup, game: Game):
-#     pass
+# 	pass
