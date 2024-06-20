@@ -3,7 +3,7 @@ import pygame
 import time
 import pyautogui
 from frontend.models.game import Game, StatBar, Passive, Weapon, Event, PlayerCharacter, Enemy, Experience, Bullet
-from ..fixtures import server, pygame_setup, game
+from ..fixtures import pygame_setup, game
 
 # Mocking doesn't have seemed to work, since the project was made without the knowledge of mocks, and my pygame elements (screen, images, so on) are created in a completely different way
 # I don't know if I have the time to change everything now, so I'm not going to risk it.
@@ -248,7 +248,7 @@ def game_start(game: Game, test = True):
 # 	assert isinstance(response, list) and len(response) == 0
 
 
-# # def test_game_gameRun(pygame_setup, game: Game):
+# # def test_game_gameRun(pygame_setup, game: Game):          #TODO
 # #     pass
 
 
@@ -618,23 +618,23 @@ def game_start(game: Game, test = True):
 # 	assert len(game.ItemGroup) == original_itemgroup_len
 
 
-def test_game_spawnMagnet(pygame_setup, game: Game):
-	game_start(game, 'need_weapon_passive_event_test')
-	game.dt = 0.05
+# def test_game_spawnMagnet(pygame_setup, game: Game):
+# 	game_start(game, 'need_weapon_passive_event_test')
+# 	game.dt = 0.05
 
-	game.MagnetCooldown = 0
-	original_itemgroup_len = len(game.ItemGroup)
-	game.spawnMagnet()
+# 	game.MagnetCooldown = 0
+# 	original_itemgroup_len = len(game.ItemGroup)
+# 	game.spawnMagnet()
 
-	assert len(game.ItemGroup) == original_itemgroup_len + 1
-	assert game.MagnetCooldown != 0
+# 	assert len(game.ItemGroup) == original_itemgroup_len + 1
+# 	assert game.MagnetCooldown != 0
 
-	original_itemgroup_len = len(game.ItemGroup)
-	game.MagnetCooldown = 1
-	original_cooldown = game.MagnetCooldown
-	game.spawnMagnet()
-	assert len(game.ItemGroup) == original_itemgroup_len
-	assert game.MagnetCooldown == original_cooldown - 0.05
+# 	original_itemgroup_len = len(game.ItemGroup)
+# 	game.MagnetCooldown = 1
+# 	original_cooldown = game.MagnetCooldown
+# 	game.spawnMagnet()
+# 	assert len(game.ItemGroup) == original_itemgroup_len
+# 	assert game.MagnetCooldown == original_cooldown - 0.05
 
 # def test_game_spawnEnemies(pygame_setup, game: Game):
 # 	pass

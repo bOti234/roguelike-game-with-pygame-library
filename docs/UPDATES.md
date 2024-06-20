@@ -340,3 +340,11 @@ Github repository for the second assignment of Programming II.
 -Added test features to someof the functions. Whenever a function would've called another function at it's end, when the test runs, this won't happen anymore.
 
 -Now every time a sound plays during test, it still plays, but it will be muted.
+
+### Update v1.4.3
+
+-Made it possible to test the files and functions that have anything to do with Django.
+
+-Added a custom subclass of Django's TestCase class.
+
+-Finished the tests for views.py.

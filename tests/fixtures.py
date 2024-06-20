@@ -1,14 +1,6 @@
 import pygame
 import pytest
 from frontend.models.game import Game
-from app import createServer
-
-@pytest.fixture(autouse = True)
-def server():
-    server_process = createServer()
-    yield server_process
-    server_process.terminate()
-    server_process.wait()
 
 @pytest.fixture(scope="module")
 def pygame_setup():

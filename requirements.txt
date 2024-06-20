@@ -1,12 +1,7 @@
-pygame,
-pytest,
-os,
-math,
-time,
-random,
-pandas,
-typing,
-requests,
-threading,
-glob,
-concurrent
+pygame == 2.5.2
+pytest == 8.2.2
+pandas == 2.2.2
+requests == 2.31.0
+screeninfo == 0.8.1
+Django == 5.0.6
+PyAutoGUI == 0.9.54
