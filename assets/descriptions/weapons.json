@@ -1,0 +1,14 @@
+[
+    {"High-tech Rifle": "A strong rifle that shoots a sniper bullet every few seconds. The more you upgrade it, the faster it gets. On higher levels, it can shoot multiple bullets at once."},
+    {"Energy Orb": "Two purple energy orbs that rotates around you and knocks back enemies. With each upgrade it gains more orbs. Great at keeping your foes far away."},
+    {"Boomerang": "A boomerang that returns to you. Provides high damage and great knockback, but it's hard to aim. One of the strongest weapons, when used correctly."},
+    {"Flamethrower": "A weapon that shoots flames. On a higher level, this weapon evaporates everything in front of it."},
+    {"Damaging Field": "A field that damages enemies. Enemies are slowed inside its area. On higher levels, multiple fields spawn at once. A really strong weapon with huge amount of crowd-control."},
+    {"Attack Drone": "A drone that attacks the closest enemy to it with a laser. A very strong defensive weapon with increasing range and targetable enemies."},
+    {"Cluster Bombs": "An explosion that can be detonated remotely. A really strong weapon when you want to defend your position."},
+    {"Pistols": "A pair of pistols. It has a high firerate, but only a small amount of pierce. Great at handling large enemies, like bosses and minibosses."},
+    {"Scatter Rifle": "A rifle that shoots an energy orb that scatters after travelling a set distance. It can deal great damage, when a lot of its projectiles hit."},
+    {"Homing Arrow": "An arrow that flies through the closest enemies. It deals a large amount of damage if you let it fly into large groups of enemies. Cannot attack recently damaged enemies."},
+    {"Laser Beam": "A high temperature beam that melts everything in its path. This is the weapon you need, when you lack mass destruction."},
+    {"Energy Sword": "A greatsword that cuts everything it touches in half. On a higher level, it kills everything around you."}
+]

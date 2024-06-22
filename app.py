@@ -8,7 +8,7 @@ game = Game()
 
 def createServer():
     # Start Django server
-    server_process = subprocess.Popen(['python', 'backend/run_server.py'])
+    server_process = subprocess.Popen(['python', 'run_server.py'])
 
     # Wait for the server to start up
     time.sleep(2)  # Adjust the sleep time as necessary

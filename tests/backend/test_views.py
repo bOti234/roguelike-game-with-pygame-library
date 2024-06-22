@@ -17,7 +17,7 @@ class UserViewTests(TestCase):
         self.client = Client()
         self.user_data = {
             'player_name': 'testuser',
-            'password': 'testPass123',
+            'password': '#testPass138',
             'email': 'unique.testuser@example.com',
             'highscore': 0
         }
@@ -28,8 +28,8 @@ class UserViewTests(TestCase):
         url = reverse('register')
         data = {
             'player_name': 'newuser',
-            'password1': 'newPass123',
-            'password2': 'newPass123',
+            'password1': '#testPass139',
+            'password2': '#testPass139',
             'email': 'newuser@example.com',
             'highscore': 0
         }

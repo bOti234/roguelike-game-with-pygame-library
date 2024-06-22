@@ -10,7 +10,7 @@ class GameObject(pygame.sprite.Sprite):
 		self.position: pygame.Vector2 = position
 		self.width = width
 		self.height = height
-		if self.objtype in ["enemy", "player", "experience"] or ("bullet" in self.objtype and (self.weaponname == "Energy Orb" or self.weaponname == "Damaging Field" or "Scatter" in self.weaponname)):
+		if self.objtype in ["enemy", "player", "experience", "boss_slow_field"] or ("bullet" in self.objtype and (self.weaponname == "Energy Orb" or self.weaponname == "Damaging Field" or "Scatter" in self.weaponname)):
 			self.radius = self.width / 2
 			if self.objtype == "enemy":
 				self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.width, self.height)
@@ -83,7 +83,7 @@ class PlayerCharacter(GameObject):
 		self.setStats()
 		self.health_current = self.health_max
 		self.hitCooldown = 0
-		self.experience_max: int = 1000
+		self.experience_max: int = 1250
 		self.experience_current: int = 0
 		self.experience_queue: int = 0
 	
@@ -108,7 +108,7 @@ class PlayerCharacter(GameObject):
 		while self.experience_queue > self.experience_max:
 			n += 1
 			self.experience_queue -= int(self.experience_max)
-			self.experience_max = int(round(self.experience_max * 1.1))
+			self.experience_max = int(round(self.experience_max * 1.285))
 		if self.experience_queue > 10:
 			self.experience_current += ((self.experience_queue // 100) + 10)
 			self.experience_queue -= ((self.experience_queue // 100) + 10)
@@ -118,13 +118,13 @@ class PlayerCharacter(GameObject):
 		if self.experience_current >= self.experience_max:
 			n += 1
 			self.experience_current -= int(self.experience_max)
-			self.experience_max = int(round(self.experience_max * 1.1))
+			self.experience_max = int(round(self.experience_max * 1.285))
 		self.level += n
 		self.setStats()
 		return n
 
 class Passive():
-	def __init__(self, name, value, cooldown):
+	def __init__(self, name, value, cooldown, description):
 		self.name = name
 		self.level = 0
 		self.value = value
@@ -134,7 +134,7 @@ class Passive():
 			self.count = 1
 		else:
 			self.count = 0
-		self.description = self.getDescription()
+		self.description = description
 
 		self.loadImages()
 	
@@ -156,90 +156,81 @@ class Passive():
 		self.radius = radius
 		self.rect = pygame.Rect(self.position.x - self.radius, self.position.y - self.radius, self.radius * 2, self.radius * 2)
 	
-	def upgradeItem(self, player: PlayerCharacter, amount = 1, noTest = True):
+	def upgradeItem(self, player: PlayerCharacter = None, amount = 1, noTest = True):
 		for i in range(amount):
 			if self.level < 5:
 				self.level += 1
-			
-			if self.name == "Health Regeneration":
-				if self.level > 1:
-					self.value += 5
-					self.cooldown_max -= 1
-				if noTest:
-					player.updateStatusEffects(self.value, "health regen")
-			
-			if self.name == "Protective Barrier":
-				if self.level > 1:
-					self.value += 5
-					self.cooldown_max -= 1
-				if noTest:
-					player.updateStatusEffects(self.value, "barrier")
 
-			if self.name == "Greater Strength":
-				if self.level > 1:
+			if self.level > 1:
+				if self.name == "Health Regeneration":
+					self.value += 5
+					self.cooldown_max -= 1
+					if noTest:
+						player.updateStatusEffects(self.value, "health regen")
+				
+				if self.name == "Protective Barrier":
+					self.value += 5
+					self.cooldown_max -= 1
+					if noTest:
+						player.updateStatusEffects(self.value, "barrier")
+
+				if self.name == "Greater Strength":
 					self.value += 0.05
 					if noTest:
 						player.updateStatusEffects(self.value, "damage percentage", self.name)
-				if self.level == 5:
-					if noTest:
-						player.updateStatusEffects(1, "damage flat", self.name)
+					if self.level == 5:
+						if noTest:
+							player.updateStatusEffects(1, "damage flat", self.name)
 
-			if self.name == "Dodge":
-				if self.level > 1:
+				if self.name == "Dodge":
 					self.value += 1
 					self.cooldown_max -= 1
 
-			if self.name == "Crit rate":
-				if self.level > 1:
+				if self.name == "Crit rate":
 					self.value += 0.05
-			
-			if self.name == "Gunslinger":
-				if self.level > 1:
-					self.value += 5
-					self.count += 1
-				if noTest:
-					player.updateStatusEffects(self.value, "gunslinger")
-
-			if self.name == "Berserk":
-				if self.level > 1:
-					self.value += 0.2
-				if noTest:
-					player.updateStatusEffects(self.value, "damage percentage", self.name)
-			
-			if self.name == "Greater Vitality":
-				if self.level > 1:
-					self.value += 25
-				if noTest:
-					player.updateStatusEffects(self.value, "health flat", self.name)
-				if self.level == 5:
+				
+				if self.name == "Gunslinger":
+					self.value += 2
 					if noTest:
-						player.updateStatusEffects(0.2, "health percentage", self.name)
-			
-			if  self.name == "Slowing Aura":
-				if self.level > 1:
-					self.value += 0.1
-				if noTest:
-					self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
+						self.count += 1
+						player.updateStatusEffects(self.value, "gunslinger")
 
-			if self.name == 'Enhanced Wisdom':
-				if self.level > 1:
+				if self.name == "Berserk":
+					self.value += 0.2
+					if noTest:
+						player.updateStatusEffects(self.value, "damage percentage", self.name)
+				
+				if self.name == "Greater Vitality":
+					self.value += 25
+					if noTest:
+						player.updateStatusEffects(self.value, "health flat", self.name)
+					if self.level == 5:
+						if noTest:
+							player.updateStatusEffects(0.2, "health percentage", self.name)
+				
+				if  self.name == "Slowing Aura":
+					self.value += 0.1
+					if noTest:
+						self.setHitbox(player.position, self.value * 5 + 49 + 50 * self.level)
+
+				if self.name == 'Enhanced Wisdom':
 					self.value += 0.08
+
+				if self.name == 'Increased Reach':
+					self.value += 40
+
+				if self.name == 'Second Chance':
+					self.value += 0.05
+
 	
-	def getUpgradeValues(self, player):
+	def getUpgradeValues(self):
 		tempValue, tempCooldown = self.value, self.cooldown_max
-		self.upgradeItem(player, 1, False)
+		self.upgradeItem(None, 1, False)
 		self.level -= 1
 		diffValue, diffCooldown = self.value - tempValue, self.cooldown_max - tempCooldown
 		self.value, self.cooldown_max = tempValue, tempCooldown
-		return diffValue, diffCooldown
-
-	def getDescription(self):
-		dirname = os.path.dirname(__file__)
-		filename_passive = os.path.join(dirname, '../../assets/descriptions/passives.txt')
-		with open(filename_passive, "r") as f:
-			cont = {}
-			[cont.update(eval(line)) for line in f.readlines()]
-		return eval(cont[self.name])
+		return {'value': round(diffValue, 3), 'cooldown': diffCooldown}
+	
 	
 class Bullet(GameObject):
 	def __init__(self, weaponnanme: str, position: pygame.Vector2, position_original: pygame.Vector2, position_destination: pygame.Vector2, lifetime: float, damage: float, pierce: int, crit: bool, objtype: str, width_and_height: int):
@@ -279,7 +270,7 @@ class Bullet(GameObject):
 		return points_list
 
 class Weapon(GameObject):
-	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], range: int, charge: int, damage: float, pierce: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float):
+	def __init__(self, name: str, cooldown_max: float, dmgtype: str, pattern: str, colour: str, size: int, speed: int, bulletlifetime: Union[int, str], range: int, charge: int, damage: float, pierce: float, position: pygame.Vector2, slow: float, knockback: float, weaken: float, description):
 		objtype = "weapon"
 		self.pattern: str = pattern
 		self.name: str = name
@@ -291,7 +282,7 @@ class Weapon(GameObject):
 			width_and_height = size
 		else:
 			self.rotation = None
-			self.distance = None
+			self.distance = 0
 			width_and_height = size
 
 		super().__init__(objtype, position, width_and_height, width_and_height)
@@ -306,13 +297,16 @@ class Weapon(GameObject):
 			self.projectile_range = 50
 			self.projectile_count = 10
 			self.projectile_size = 10
-
-		if self.name == "Scatter Rifle":
+		elif self.name == "Scatter Rifle":
 			self.projectile_damage = 10
 			self.projectile_range = 350
 			self.projectile_count = 5
 			self.projectile_size = 10
-
+		else:
+			self.projectile_damage = 0
+			self.projectile_range = 0
+			self.projectile_count = 0
+			self.projectile_size = 0
 		
 		self.status_effects = {"slow":slow, "knockback":knockback, "weaken":weaken}
 
@@ -332,7 +326,7 @@ class Weapon(GameObject):
 		self.position_original = pygame.Vector2(position.x, position.y)
 		self.position_destination = pygame.Vector2(0,0)
 		self.animation: bool = False
-		self.description = self.getDescription()
+		self.description = description
 
 		dirname = os.path.dirname(__file__)
 		filename = os.path.join(dirname, '../../assets/audio/'+self.name+' Sound.wav')
@@ -342,14 +336,6 @@ class Weapon(GameObject):
 			self.sound = None
 
 		self.loadImages()
-	
-	def getDescription(self):	#TODO: LOOK UP GINGA AND i18n!!!!!!!!!!!!!!!
-		dirname = os.path.dirname(__file__)
-		filename_desc = os.path.join(dirname, '../../assets/descriptions/weapons.txt')
-		with open(filename_desc, "r") as f:
-			cont = {}
-			[cont.update(eval(line)) for line in f.readlines()]
-		return eval(cont[self.name])
 	
 	def loadImages(self):
 		if pygame.get_init():
@@ -364,7 +350,6 @@ class Weapon(GameObject):
 				self.image_projectile = None
 		else:
 			self.image_base, self.image_maxed, self.image_projectile = None, None, None
-			
 
 	def updateCooldown(self, dt):
 		if self.cooldown_current > 0:
@@ -376,7 +361,7 @@ class Weapon(GameObject):
 		if self.cooldown_current <= 0:
 			self.cooldown_current = self.cooldown_max
 	
-	def upgradeItem(self, player = None, amount = 1):
+	def upgradeItem(self, player = None, amount = 1, noTest = True):
 		for i in range(amount):
 			if self.level < 5:
 				self.level += 1
@@ -411,7 +396,8 @@ class Weapon(GameObject):
 							self.pierce -= 1
 
 					if self.name == "Damaging Field":
-						self.status_effects["slow"] += 0.1
+						if noTest:
+							self.status_effects["slow"] += 0.1
 						self.size += 50
 						self.damage += 0.15
 						self.cooldown_max -= 0.1
@@ -500,7 +486,17 @@ class Weapon(GameObject):
 						self.bulletLifeTime += 0.02
 						self.cooldown_max -= 0.1
 
-	
+	def getUpgradeValues(self):
+		tempDamage, tempCooldown, tempSpeed, tempSize, tempPierce, tempCharge, tempBulletlifetime = self.damage, self.cooldown_max, self.speed, self.size, self.pierce, self.charge_max, self.bulletLifeTime
+		tempProjDam, tempProjCount, tempProjRange, tempProjSize, tempDistance, tempRange = self.projectile_damage, self.projectile_count, self.projectile_range,  self.projectile_size, self.distance, self.range
+		self.upgradeItem(None, 1, False)
+		self.level -= 1
+		diffDamage, diffCooldown, diffSpeed, diffSize, diffPierce, diffCharge, diffBulletlifetime = self.damage - tempDamage, self.cooldown_max - tempCooldown, self.speed - tempSpeed, self.size - tempSize, self.pierce - tempPierce, self.charge_max - tempCharge, self.bulletLifeTime - tempBulletlifetime
+		diffProjDam, diffProjCount, diffProjRange, diffProjSize, diffDistance, diffRange = self.projectile_damage - tempProjDam, self.projectile_count - tempProjCount, self.projectile_range - tempProjRange,  self.projectile_size - tempProjSize, self.distance - tempDistance, self.range - tempRange
+		self.damage, self.cooldown_max, self.speed, self.size, self.pierce, self.charge_max, self.bulletLifeTime = tempDamage, tempCooldown, tempSpeed, tempSize, tempPierce, tempCharge, tempBulletlifetime
+		self.projectile_damage, self.projectile_count, self.projectile_range,  self.projectile_size, self.distance, self.range = tempProjDam, tempProjCount, tempProjRange, tempProjSize, tempDistance, tempRange
+		return {'damage': round(diffDamage, 3), 'cooldown': round(diffCooldown, 3), 'speed': diffSpeed, 'size': diffSize, 'pierce': diffPierce, 'charge': diffCharge, 'bullet lifetime': round(diffBulletlifetime, 3), 'projectile damage': diffProjDam, 'projectile count': diffProjCount, 'projectile range': diffProjRange, 'projectile size': diffProjSize, 'orbit distance': diffDistance, 'range': diffRange}
+
 	def getClusters(self, bullet: Bullet):
 		b = []
 		r = self.projectile_count
@@ -530,22 +526,25 @@ class Enemy(GameObject):
 		self.position_original = pygame.Vector2(position.x, position.y)
 		self.position_destination = pygame.Vector2(0,0)
 		self.level = level
+		self.type = type
 		self.event_type = event_type
-		if self.level > 30:
-			if event_type != 'group':
-				self.level = 30
+
+		if event_type == 'group' or self.type == 'brute':
+			self.level = 49 if self.level > 49 else self.level
+		else:
+			self.level = 40 if self.level > 40 else self.level
+
 		if self.event_type == None or self.event_type == 'group':
 			scale = self.level - 1
 		else:
 			scale = 0
 		self.radius = radius
-		self.health = health + scale * 5 * 3**(scale//9)
+		self.health = health + scale * 6.5 * + 3**(scale/9)
 		self.colour = colour
 		self.fixedcolour = colour
-		self.damage = damage + scale * 1 + 2**(scale//9)
-		self.speed = speed + scale * 2 + 2**(scale//9)
+		self.damage = damage + scale * 1.5 + 2**(scale//7)
+		self.speed = speed + scale * 2.3 + 2**(scale//7)
 		self.weakness = weakness
-		self.type = type
 		self.targetable = targetable
 		
 		self.hitCooldown = 0
@@ -554,6 +553,17 @@ class Enemy(GameObject):
 		self.status_effects: Dict[str, Dict[str, Union[bool, float, int]]] = {}
 		self.setStatusDict(weaponlist)
 
+		if self.type == 'boss':
+			self.health *= 20
+			self.damage *= 3
+			self.speed *= 2
+			self.projectile_cooldown_max = 1.5
+			self.projectile_cooldown_current = 0
+			self.slowing_area = GameObject('boss_slowing_area', pygame.Vector2(self.position.x - 200, self.position.y - 200),  400, 400)
+		else:
+			self.projectile_cooldown_max = None
+			self.projectile_cooldown_current = None
+			self.slowing_area = None
 
 	def setStatusDict(self, weaponlist: List[Weapon]):
 		for weapon in weaponlist:
@@ -569,7 +579,7 @@ class Enemy(GameObject):
 					attr["duration"] -= dt
 
 class Experience(GameObject):
-	def __init__(self, position: pygame.Vector2, radius = 8, colour = 'white', value = 20):
+	def __init__(self, position: pygame.Vector2, radius = 8, colour = 'white', value = 20, min_distance = 200):
 		objtype = "experience"
 		width_and_height = radius * 2
 		super().__init__(objtype, position, width_and_height, width_and_height)
@@ -580,7 +590,7 @@ class Experience(GameObject):
 		self.radius = radius
 		self.colour = colour
 		self.value = value
-		self.min_distance = 200
+		self.min_distance = min_distance
 
 		self.r = 254
 		self.g = 0

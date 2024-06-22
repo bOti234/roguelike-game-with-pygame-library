@@ -1,0 +1,14 @@
+[
+    {"Health Regeneration": "Restores some health every few seconds. The time between two heals shortens and the amount regenerated increases with each level of the passive."},
+    {"Berserk": "You deal more damage, but enemies also gain this damage increase. Very situational, but it can be also really powerful."},
+    {"Crit Chance": "Gives increasing chance to double your damage. The chance increases with the level of the passive."},
+    {"Dodge": "Gives 25% chance to negate the damage when being hit, then goes on a cooldown. Can store up to 1 charge, increasing with level of this passive."},
+    {"Gunslinger": "Weapon kits spawn a few seconds sooner, but not sooner than every 15 seconds. Whenever you upgrade this, one kit spawns nearby you."},
+    {"Protective Barrier": "Creates a barrier around you that can withstand some damage. When the barrier is damaged, it goes on a cooldown. When the cooldown ends, the barrier is restored."},
+    {"Slowing Aura": "Creates a field around you that slows enemy movement speed. The fields range is also increased with the level of the passive."},
+    {"Greater Strength": "You deal more damage. On the final level every weapon deals +1 flat damage. This is really strong on fast firing weapons."},
+    {"Greater Vitality": "Your health is greatly increased. On the final level it is further increased by 20%."},
+    {"Enhanced Wisdom": "Experience orbs you pick up give you more experience."},
+    {"Increased Reach": "You can pick up experience orbs from further away. It also gives your straight shooting weapons +1 pierce and +0.25 seconds bulletlifetime on the final level."},
+    {"Second Chance": "This passive only works once and after it was used, it deactivates. When you would die the first time, You resurrect with some of your health and kill all enemies around you."}
+]

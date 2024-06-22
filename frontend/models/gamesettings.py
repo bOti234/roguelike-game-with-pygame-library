@@ -8,6 +8,6 @@ class GameSettings():
 		self.fullscreen_width: int = screen_width
 		self.fullscreen_height: int = screen_height
 		self.game_size: int = game_size
-		self.mastervolume = 0.5
-		self.musicvolume = 0.5
-		self.gamesoundvolume = 0.5
+		self.mastervolume = 0.5 	#0.5
+		self.musicvolume = 0.5  	#0.5
+		self.gamesoundvolume = 0.5  #0.5

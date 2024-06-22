@@ -49,3 +49,11 @@ Each game will be unique and requires different playstiles depending on the chos
 With time spent in the game and with enemies defeated, you increase your score. Every user has a highscore that appears in the leaderboard. 
 
 You can see the live leaderboard with the top 5 players of the game. To save your score, you can either log in when you start a game, or you can log in after you get defeated. 
+
+## How do I test the program?
+
+You can simply test the game with the command ```pytest``` written in your terminal, however, since there are tests for the game as well, it will take a lot of time for them to run. 
+
+Pygame tests need to initialize the game first for them to run, making the tests longer. For the pygame tests only, you can write ```pytest tests/frontend``` in your terminal.
+
+You can use the command ```pytest tests/backend``` to only test the networking and database related functions.

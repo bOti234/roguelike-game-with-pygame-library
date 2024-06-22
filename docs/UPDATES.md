@@ -348,3 +348,33 @@ Github repository for the second assignment of Programming II.
 -Added a custom subclass of Django's TestCase class.
 
 -Finished the tests for views.py.
+
+### Update v1.4.4
+
+-Finished the tests for models.py and forms.py.
+
+-Updated readme with details on the testing.
+
+-Made the game slightly less laggy.
+
+-Buffed enemy spawn rate, health, damage and speed to make the game more difficult and faster.
+
+-Nerfed experience gain and weaponkit spawnrate. Greatly nerfed gunslinger.
+
+-Added the current player to the scoreboard. The scoreboard now automatically updates when the users score is changed.
+
+-Added a hide feature to the scoreboard. Whenever the player hovers it's place, the scoreboard slides in from the sides. When the player slides their mouse somewhere else, the scoreboard hides again.
+
+-Added bosses to the game. They appear every 5 minutes and spawn with highly increased stats. THey can slow the player around them and can shoot bullets every 1.5 seconds.
+
+-Fixed the UI of the main menu and the itemlist menu. Now the future upgrades of weapons and passives appear nicely with the items current level.
+
+-Added options to main menu. Does the same as the one in the in game menu.
+
+-Rewrote the descriptions of the weapons and the passives. Fixed the import and setting of the descriptions to their respective item.
+
+-Added image and finished implementation and balance of increased reach and second chance passives.
+
+-With increased reach you can collect experience orbs from far away. On the final level, your bullets gain additional pierce and lifetime.
+
+-With second chance you won't die the first time you health drops below zero. When this would happen you regain a percentage of your max health, then kill all nerby enemies. After this effect, you lose this passive, but you can choose a different one in place of this after you level up.

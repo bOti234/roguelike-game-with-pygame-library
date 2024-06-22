@@ -2,7 +2,7 @@ import pygame
 import threading
 import time
 from frontend.models.game import Game
-from ..fixtures import game
+from ..fixtures import pygame_setup, game
 
 def run_game(game: Game):
     game.gameStart(

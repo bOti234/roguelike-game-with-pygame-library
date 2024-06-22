@@ -54,11 +54,15 @@ class Menu(HUD):
 		self.opened = False
 		self.state = None
 
-	def openMainMenu(self, csrf_token, sizeratio_x, sizeratio_y, userdata = None):
+	def openMainMenu(self, csrf_token, sizeratio_x, sizeratio_y, mastervolume, musicvolume, gamesoundvolume, userdata = None):
 		if pygame.get_init():
 			dirname = os.path.dirname(__file__)
 			filename = os.path.join(dirname, '../../assets/images/buttons/')
 			play_img = pygame.image.load(filename+"/button_play.png").convert_alpha()
+			options_img = pygame.image.load(filename+"/button_options.png").convert_alpha()
+			video_img = pygame.image.load(filename+"/button_video.png").convert_alpha()
+			audio_img = pygame.image.load(filename+"/button_audio.png").convert_alpha()
+			apply_img = pygame.image.load(filename+"/button_apply.png").convert_alpha()
 			quit_img = pygame.image.load(filename+"/button_quit.png").convert_alpha()
 			back_img = pygame.image.load(filename+"/button_back.png").convert_alpha()
 
@@ -69,7 +73,31 @@ class Menu(HUD):
 			menuY = self.screen_height/5
 			
 			play_button = Button(self.screen_width/2 - play_img.get_width()/2 * scale, menuY + 175 * sizeratio_y, play_img, scale)
-			quit_button = Button(self.screen_width/2 - quit_img.get_width()/2 * scale, menuY + 475 * sizeratio_y, quit_img, scale)
+			options_button = Button(self.screen_width/2 - options_img.get_width()/2 * scale, menuY + 275 * sizeratio_y, options_img, scale)
+			video_button = Button(self.screen_width/2 - video_img.get_width()*3/4 * scale, self.screen_height/4 + 75 * sizeratio_y, video_img, scale*1.5)
+			audio_button = Button(self.screen_width/2 - audio_img.get_width()*3/4 * scale, self.screen_height/4 + 200 * sizeratio_y, audio_img, scale*1.5)
+			apply_button = Button(self.screen_width/2 - apply_img.get_width()/2 * scale, self.screen_height/4 + 350 * sizeratio_y, apply_img, scale)
+			quit_button = Button(self.screen_width/2 - quit_img.get_width()/2 * scale, menuY + 575 * sizeratio_y, quit_img, scale)
+
+			sliders = {
+				'master_volume_slider': Slider('Master', pygame.Vector2(self.screen_width / 2 - 250 * sizeratio_x, self.screen_height / 2 - 200 * sizeratio_y), 500 * sizeratio_x, 30 * sizeratio_y, font, mastervolume, 0, 100),
+				'music_volume_slider': Slider('Music', pygame.Vector2(self.screen_width / 2 - 250 * sizeratio_x, self.screen_height / 2 - 100 * sizeratio_y), 500 * sizeratio_x, 30 * sizeratio_y, font, musicvolume, 0, 100),
+				'gamesound_volume_slider': Slider('Game sounds', pygame.Vector2(self.screen_width / 2 - 250 * sizeratio_x, self.screen_height / 2), 500 * sizeratio_x, 30 * sizeratio_y, font, gamesoundvolume, 0, 100)
+			}
+
+			resolution_options = [
+				{'width': 3840, 'height': 2160},
+				{'width': 2560, 'height': 1600},
+				{'width': 2560, 'height': 1440},
+				{'width': 1920, 'height': 1200},
+				{'width': 1920, 'height': 1080},
+				{'width': 1600, 'height': 1200},
+				{'width': 1600, 'height': 900},
+				{'width': 1366, 'height': 768},
+				{'width': 1280 , 'height': 720},
+				{'width': 800 , 'height': 600}
+			]
+			video_dropdown = Dropdown('Screen resolution', pygame.Vector2(self.screen_width / 2 - 200 * sizeratio_x, self.screen_height / 2 - 200 * sizeratio_y), 400 * sizeratio_x, 35 * sizeratio_y, resolution_options, font, self.screen_width, self.screen_height)
 
 			if userdata:
 				logout_img = pygame.image.load(filename+"/button_logout.png").convert_alpha()
@@ -82,22 +110,22 @@ class Menu(HUD):
 				highscore_text_button = Button(highscore_text_box.x, highscore_text_box.y, [font, "Current highscore: "+str(userdata["highscore"]), "white", highscore_text_box], 1)
 				
 				
-				log_button = Button(self.screen_width/2 - logout_img.get_width()/2 * scale, menuY + 275 * sizeratio_y, logout_img, scale)
-				user_button = Button(self.screen_width/2 - update_img.get_width()/2 * scale, menuY + 375 * sizeratio_y, update_img, scale)
+				log_button = Button(self.screen_width/2 - logout_img.get_width()/2 * scale, menuY + 375 * sizeratio_y, logout_img, scale)
+				user_button = Button(self.screen_width/2 - update_img.get_width()/2 * scale, menuY + 475 * sizeratio_y, update_img, scale)
 			else:
 				login_img = pygame.image.load(filename+"/button_login.png").convert_alpha()
 				create_img = pygame.image.load(filename+"/button_createuser.png").convert_alpha()
 
 				welocme_text_box = pygame.Rect(self.screen_width/2 - font.size("Play as guest!")[0]/2, menuY + 50 * sizeratio_y, font.size("Play as guest!")[0], font.get_linesize()*2)
 				welocme_text_button = Button(welocme_text_box.x, welocme_text_box.y, [font, "Play as guest!", "white", welocme_text_box], 1)
-				log_button = Button(self.screen_width/2 - login_img.get_width()/2 * scale, menuY + 275 * sizeratio_y, login_img, scale)
-				user_button = Button(self.screen_width/2 - create_img.get_width()/2 * scale, menuY + 375 * sizeratio_y, create_img, scale)
+				log_button = Button(self.screen_width/2 - login_img.get_width()/2 * scale, menuY + 375 * sizeratio_y, login_img, scale)
+				user_button = Button(self.screen_width/2 - create_img.get_width()/2 * scale, menuY + 475 * sizeratio_y, create_img, scale)
 
 			username_textbox = TextBox(self.screen_width/2 - 30 * font.size("_")[0]/2, self.screen_height/4 + 100 * sizeratio_y, 30 * font.size("_")[0], font.get_linesize()*2, font, "username", "username...")
 			password_textbox = TextBox(self.screen_width/2 - 30 * font.size("_")[0]/2, self.screen_height/4 + 175 * sizeratio_y, 30 * font.size("_")[0], font.get_linesize()*2, font, "password", "password...")
 			password2_textbox = TextBox(self.screen_width/2 - 30 * font.size("_")[0]/2, self.screen_height/4 + 250 * sizeratio_y, 30 * font.size("_")[0], font.get_linesize()*2, font, "password", "password again...")
 			email_textbox = TextBox(self.screen_width/2 - 30 * font.size("_")[0]/2, self.screen_height/4 + 325 * sizeratio_y, 30 * font.size("_")[0], font.get_linesize()*2, font, "email", "email address...")
-			back_button = Button(self.screen_width/2 - back_img.get_width()/2 * scale, self.screen_height/4 + 475 * sizeratio_y, back_img, scale)
+			back_button = Button(self.screen_width/2 - back_img.get_width()/2 * scale, self.screen_height/4 + 575 * sizeratio_y, back_img, scale)
 
 			#game loop
 			run = True
@@ -119,6 +147,10 @@ class Menu(HUD):
 					#draw pause screen buttons
 					if play_button.draw(self.screen):
 						return ("start game", userdata)
+					
+					if options_button.draw(self.screen):
+						self.state = "options"
+						button_timeout = 100
 					
 					if log_button.draw(self.screen):
 						if userdata:
@@ -144,6 +176,59 @@ class Menu(HUD):
 							run = False
 							return ("exit", userdata)
 				
+				if self.state == "options":
+					#draw the different options buttons
+					if video_button.draw(self.screen):
+						if button_timeout <= 0:
+							self.state = 'video settings'
+					if audio_button.draw(self.screen):
+						if button_timeout <= 0:
+							self.state = 'audio settings'
+					if back_button.draw(self.screen):
+						if button_timeout <= 0:
+							self.state = "inMainMenu"
+							button_timeout = 100
+
+				if self.state == 'video settings':
+					if video_dropdown.draw(self.screen):
+						run = False
+						return (['video setting', video_dropdown.chosen_option], userdata)
+
+					if not video_dropdown.clicked:
+						if apply_button.draw(self.screen):
+							run = False
+							return (['video setting final', video_dropdown.chosen_option], userdata)
+
+						if back_button.draw(self.screen):
+							self.state = "options"
+							return (['video setting final', {'width':self.screen_width, 'height':self.screen_height}], userdata)
+
+				if self.state == 'audio settings':
+					mouse_pos = pygame.mouse.get_pos()
+					mouse = pygame.mouse.get_pressed()
+					for slider in sliders.values():
+						if slider.container_rect.collidepoint(mouse_pos):
+							if mouse[0]:
+								slider.grabbed = True
+						if not mouse[0]:
+							slider.grabbed = False
+						if slider.button_rect.collidepoint(mouse_pos):  
+							slider.hover()
+						if slider.grabbed:
+							slider.move_slider(mouse_pos)
+							slider.hover()
+						else:
+							slider.hovered = False
+						slider.render(self.screen)
+						slider.display_value(self.screen)
+
+					if apply_button.draw(self.screen) and slider.grabbed == False:
+						run = False
+						return (['audio setting', sliders['master_volume_slider'].get_value()/100, sliders['music_volume_slider'].get_value()/100, sliders['gamesound_volume_slider'].get_value()/100], userdata)
+
+					if back_button.draw(self.screen) and slider.grabbed == False:
+						self.state = "options"
+				
 				if self.state == "logInMenu":
 					username_textbox.draw(self.screen), password_textbox.draw(self.screen)
 
@@ -161,7 +246,7 @@ class Menu(HUD):
 							run = False
 
 					if back_button.draw(self.screen):
-						log_button.rect.y = menuY + 275 * sizeratio_y
+						log_button.rect.y = menuY + 375 * sizeratio_y
 						self.state = "inMainMenu"
 						button_timeout = 100
 
@@ -185,7 +270,7 @@ class Menu(HUD):
 							run = False
 					
 					if back_button.draw(self.screen):
-						user_button.rect.y = menuY + 375 * sizeratio_y
+						user_button.rect.y = menuY + 475 * sizeratio_y
 						self.state = "inMainMenu"
 						button_timeout = 100
 
@@ -205,7 +290,7 @@ class Menu(HUD):
 							run = False
 
 					if back_button.draw(self.screen):
-						user_button.rect.y = menuY + 375 * sizeratio_y
+						user_button.rect.y = menuY + 475 * sizeratio_y
 						self.state = "inMainMenu"
 						button_timeout = 100
 				
@@ -228,7 +313,7 @@ class Menu(HUD):
 					return ('test', userdata)
 
 			if logchange:
-				return self.openMainMenu(csrf_token, userdata)
+				return self.openMainMenu(csrf_token, sizeratio_x, sizeratio_y, mastervolume, musicvolume, gamesoundvolume, userdata)
 
 	def openInGameMenu(self, sizeratio_x, sizeratio_y, mastervolume, musicvolume, gamesoundvolume):
 		if pygame.get_init():
@@ -248,8 +333,8 @@ class Menu(HUD):
 			resume_button = Button(self.screen_width/2 - resume_img.get_width()/2 * scale, self.screen_height/4 + 125 * sizeratio_y, resume_img, scale)
 			options_button = Button(self.screen_width/2 - options_img.get_width()/2 * scale, self.screen_height/4 + 250 * sizeratio_y, options_img, scale)
 			quit_button = Button(self.screen_width/2 - quit_img.get_width()/2 * scale, self.screen_height/4 + 375 * sizeratio_y, quit_img, scale)
-			video_button = Button(self.screen_width/2 - video_img.get_width()/2 * scale, self.screen_height/4 + 75 * sizeratio_y, video_img, scale)
-			audio_button = Button(self.screen_width/2 - audio_img.get_width()/2 * scale, self.screen_height/4 + 200 * sizeratio_y, audio_img, scale)
+			video_button = Button(self.screen_width/2 - video_img.get_width()*3/4 * scale, self.screen_height/4 + 75 * sizeratio_y, video_img, scale*1.5)
+			audio_button = Button(self.screen_width/2 - audio_img.get_width()*3/4 * scale, self.screen_height/4 + 200 * sizeratio_y, audio_img, scale*1.5)
 			apply_button = Button(self.screen_width/2 - apply_img.get_width()/2 * scale, self.screen_height/4 + 350 * sizeratio_y, apply_img, scale)
 			back_button = Button(self.screen_width/2 - back_img.get_width()/2 * scale, self.screen_height/4 + 450 * sizeratio_y, back_img, scale)
 
@@ -357,7 +442,7 @@ class Menu(HUD):
 
 			font = pygame.font.Font(None, round(30 * sizeratio_x))
 			menuX = self.screen_width/12
-			menuY = self.screen_height/5
+			menuY = self.screen_height*15/112
 			scale_image = 0.05 * sizeratio_x
 			scale_button = 0.2 * sizeratio_x
 			resume_button = Button(self.screen_width/2 - resume_img.get_width()/2 * scale_button, self.screen_height - menuY - 125 * sizeratio_y, resume_img, scale_button)
@@ -366,13 +451,18 @@ class Menu(HUD):
 			passive_images: List[pygame.Surface] = []
 			weapon_images: List[pygame.Surface] = []
 			itembuttons: List[Button] = []
+			levelbuttons: List[Button] = []
+			nextupgrade_texts: List[str] = []
 			textbuttons: List[Button] = []
 			for i in range(len(passivelist)):
 				passivelist[i].loadImages()
-				if passivelist[i].level < 4:
+				if passivelist[i].level < 5:
 					passive_images.append(passivelist[i].image_base)
+					nextupgrades = passivelist[i].getUpgradeValues() if passivelist[i].level > 0 else False
 				else:
 					passive_images.append(passivelist[i].image_maxed)
+					nextupgrades = 'Maxed out!'
+
 				total_image_length = passive_images[i].get_width() * scale_image * len(passivelist)
 				gap = (self.screen_width - 2*menuX - total_image_length) / (len(passivelist) + 1) + passive_images[i].get_width() * scale_image
 				item_button = Button(menuX + (i+1)*gap - passive_images[i].get_width() * scale_image, menuY + 150 * sizeratio_y, passive_images[i], scale_image)
@@ -381,30 +471,58 @@ class Menu(HUD):
 
 				itembuttons.append(item_button)
 
+				level_button_box = pygame.Rect(item_button.rect.x, item_button.rect.y + item_button.rect.height + 5, item_button.rect.width, font.get_linesize())
+				level_button = Button(level_button_box.x, level_button_box.y, [font, 'Level: '+str(passivelist[i].level), 'gold', level_button_box], 1)
+				levelbuttons.append(level_button)
+
 				if item_button.rect.x + 250 * sizeratio_x + passive_images[i].get_width()/2 * scale_image > self.screen_width - menuX:
-					text_box_x = item_button.rect.x - 500 * sizeratio_x + passive_images[i].get_width()*2 * scale_image
+					text_box_x = item_button.rect.x - 500 * sizeratio_x + passive_images[i].get_width() * scale_image
 				elif item_button.rect.x - 250 * sizeratio_x < menuX:
 					text_box_x = item_button.rect.x
 				else:
 					text_box_x = item_button.rect.x - 250 * sizeratio_x + passive_images[i].get_width()/2 * scale_image
 
-				text_box = pygame.Rect(text_box_x, item_button.rect.y + passive_images[i].get_height() * scale_image + 10, 500 * sizeratio_x, passive_images[i].get_height() * scale_image)
-				text_button = Button(text_box_x, item_button.rect.y + passive_images[i].get_height() * scale_image + 10, [font, passivelist[i].description, "white", text_box], 1)
+				text_box = pygame.Rect(text_box_x, item_button.rect.y + passive_images[i].get_height() * scale_image + 45, 500 * sizeratio_x, passive_images[i].get_height() * scale_image)
+				text_button = Button(text_box_x, item_button.rect.y + passive_images[i].get_height() * scale_image + 45, [font, passivelist[i].description, "white", text_box], 1)
 				textbuttons.append(text_button)
+
+				if isinstance(nextupgrades, str):
+					nextupgrade_text = nextupgrades
+				elif isinstance(nextupgrades, bool):
+					nextupgrade_dict = {'value':passivelist[i].value, 'cooldown': passivelist[i].cooldown_max}
+					nextupgrade_text = ''
+					for key, value in nextupgrade_dict.items():
+						if value != 0 and value != None:
+							value = str(int(round(value*100)))+'%' if value < 1 and value > 0 else value
+							nextupgrade_text += str(key)+': '+str(value)+'\n'
+				else:
+					nextupgrade_text = ''
+					for key, value in nextupgrades.items():
+						if value != 0 and value != None:
+							sign = '' if key == 'bullet lifetime' or key == 'cooldown' else '+'
+							nextupgrade_text += str(sign)+' '+str(value)+' '+str(key)+'\n'
+				nextupgrade_texts.append(nextupgrade_text)
 
 			for i in range(len(weaponlist)):
 				weaponlist[i].loadImages()
-				if weaponlist[i].level < 4:
+				if weaponlist[i].level < 5:
 					weapon_images.append(weaponlist[i].image_base)
+					nextupgrades = weaponlist[i].getUpgradeValues() if weaponlist[i].level > 0 else False
 				else:
 					weapon_images.append(weaponlist[i].image_maxed)
+					nextupgrades = 'Maxed out!'
+
 				total_image_length = weapon_images[i].get_width() * scale_image * len(weaponlist)
 				gap = (self.screen_width - 2*menuX - total_image_length) / (len(weaponlist) + 1) + weapon_images[i].get_width() * scale_image
-				item_button = Button(menuX + (i+1)*gap - weapon_images[i].get_width() * scale_image, menuY + 375 * sizeratio_y, weapon_images[i], scale_image)
+				item_button = Button(menuX + (i+1)*gap - weapon_images[i].get_width() * scale_image, menuY + 450 * sizeratio_y, weapon_images[i], scale_image)
 				if weaponlist[i] in player_weaponlist.values():
 					item_button.addBorder(3, 'yellow', (10, 10, 10, 10), (3, 3, 3, 3))
 
 				itembuttons.append(item_button)
+
+				level_button_box = pygame.Rect(item_button.rect.x, item_button.rect.y + item_button.rect.height + 5, item_button.rect.width, font.get_linesize())
+				level_button = Button(level_button_box.x, level_button_box.y, [font, 'Level: '+str(weaponlist[i].level), 'gold', level_button_box], 1)
+				levelbuttons.append(level_button)
 
 				if item_button.rect.x + 250 * sizeratio_x + weapon_images[i].get_width()/2 * scale_image > self.screen_width - menuX:
 					text_box_x = item_button.rect.x - 500 * sizeratio_x + weapon_images[i].get_width() * scale_image
@@ -413,9 +531,26 @@ class Menu(HUD):
 				else:
 					text_box_x = item_button.rect.x - 250 * sizeratio_x + weapon_images[i].get_width()/2 * scale_image
 				
-				text_box = pygame.Rect(text_box_x, item_button.rect.y + weapon_images[i].get_height() * scale_image + 10, 500 * sizeratio_x, weapon_images[i].get_height() * scale_image)
-				text_button = Button(text_box_x, item_button.rect.y + weapon_images[i].get_height() * scale_image + 10, [font, weaponlist[i].description, "white", text_box], 1)
+				text_box = pygame.Rect(text_box_x, item_button.rect.y + weapon_images[i].get_height() * scale_image + 45, 500 * sizeratio_x, weapon_images[i].get_height() * scale_image)
+				text_button = Button(text_box_x, item_button.rect.y + weapon_images[i].get_height() * scale_image + 45, [font, weaponlist[i].description, "white", text_box], 1)
 				textbuttons.append(text_button)
+
+				
+				if isinstance(nextupgrades, str):
+					nextupgrade_text = nextupgrades
+				elif isinstance(nextupgrades, bool):
+					nextupgrade_dict = {'damage': weaponlist[i].damage, 'cooldown': weaponlist[i].cooldown_max, 'speed': weaponlist[i].speed, 'size': weaponlist[i].size, 'pierce': weaponlist[i].pierce, 'charges': weaponlist[i].charge_max, 'bullet lifetime': weaponlist[i].bulletLifeTime, 'projectile damage': weaponlist[i].projectile_damage, 'projectile count': weaponlist[i].projectile_count, 'projectile range': weaponlist[i].projectile_range, 'projectile size': weaponlist[i].projectile_size, 'orbit distance': weaponlist[i].distance, 'range': weaponlist[i].range}
+					nextupgrade_text = ''
+					for key, value in nextupgrade_dict.items():
+						if value != 0:
+							nextupgrade_text += str(key)+': '+str(value)+'\n'
+				else:
+					nextupgrade_text = ''
+					for key, value in nextupgrades.items():
+						if value != 0:
+							sign = '' if key == 'bullet lifetime' or key == 'cooldown' else '+'
+							nextupgrade_text += str(sign)+str(value)+' '+str(key)+'\n'
+				nextupgrade_texts.append(nextupgrade_text)
 
 
 			# Game loop
@@ -423,17 +558,30 @@ class Menu(HUD):
 			while run:
 				window = pygame.Rect(menuX, menuY, self.screen_width - 2*menuX, self.screen_height - 2*menuY)
 				pygame.draw.rect(self.screen, (52, 78, 91), window)
+				mouse_pos = pygame.mouse.get_pos()
 
 				# Check menu state
 				if self.state == "inventory":
+					if resume_button.draw(self.screen):
+						run = False
+						return 'Resume game'
 					# Draw item selection buttons
 					for i, button in enumerate(itembuttons):
 						if button.draw(self.screen, True):
 							textbuttons[i].drawText(self.screen)
 					
-					if resume_button.draw(self.screen):
-						run = False
-						return 'Resume game'
+						if levelbuttons[i].drawText(self.screen, hovercheck = True):
+							lines = nextupgrade_texts[i].split('\n')
+							text_box_width = max([font.size(line)[0] for line in lines]) + 45
+							box_x_pos = mouse_pos[0] - text_box_width if mouse_pos[0] + text_box_width > self.screen_width - menuX else mouse_pos[0]
+							text_box_rect = pygame.Rect(box_x_pos, mouse_pos[1], text_box_width, font.get_linesize() * len(lines) + 20)
+							pygame.draw.rect(self.screen, 'white', text_box_rect, 0, 5)
+							pygame.draw.rect(self.screen, 'black', text_box_rect, 3, 5)
+							for j, line in enumerate(lines):
+								text = font.render(line, True, 'black')
+								text_rect = pygame.Rect(box_x_pos + 20, mouse_pos[1] + 20 + font.get_linesize() * j, font.size(line)[0], font.get_linesize()/2)
+								
+								self.screen.blit(text, text_rect)
 
 				# Event handler
 				for event in pygame.event.get():
@@ -602,7 +750,7 @@ class Menu(HUD):
 					return ('test', userdata)
 
 			if logchange:
-				return self.openDeathMenu(userdata, gamescore, csrf_token)
+				return self.openDeathMenu(sizeratio_x, sizeratio_y, userdata, gamescore, csrf_token)
 	
 	def openItemSelectorMenu(self, sizeratio_x, sizeratio_y, itemlist: List[Union[Passive, Weapon]]):   #: List[Union[Weapon, Passive]]
 		if pygame.get_init():
@@ -722,7 +870,7 @@ class Button():
 
 		return action
 
-	def drawText(self, surface, aa=False, bkg=None):
+	def drawText(self, surface, aa = False, bkg = None, hovercheck = False):
 		text = self.text
 		y = self.rect.top
 		lineSpacing = -2
@@ -762,20 +910,30 @@ class Button():
 		#get mouse position
 		pos = pygame.mouse.get_pos()
 
-		#check mouseover and clicked conditions
-		if self.rect.collidepoint(pos):
-			if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
-				self.clicked = True
+		if hovercheck:
+			if self.rect.collidepoint(pos):
 				action = True
+			else:
+				action = False
+		else:
+			#check mouseover and clicked conditions
+			if self.rect.collidepoint(pos):
+				if pygame.mouse.get_pressed()[0] == 1 and self.clicked == False:
+					self.clicked = True
+					action = True
 
-		if pygame.mouse.get_pressed()[0] == 0:
-			self.clicked = False
+			if pygame.mouse.get_pressed()[0] == 0:
+				self.clicked = False
 		
 		return action
 	
 
 class TextBox():
+	instances = []
+	counter = 0
 	def __init__(self, x, y, width, height, font, texttype, placeholder_text, text_colour = (0, 0, 0), placeholder_colour = (150, 150, 150), active_colour = (255, 0, 0), bg_colour = (255, 255, 255)):
+		TextBox.counter += 1
+		self.index = self.counter
 		self.rect = pygame.Rect(x, y, width, height)
 		self.font: pygame.font.Font = font
 		self.type = texttype
@@ -790,6 +948,9 @@ class TextBox():
 		self.cursor_show = False
 		self.cursor_timer = 500
 		self.hovered = False
+		self.timeout = 2
+
+		TextBox.instances.append(self)
 
 	def reset(self):
 		self.text = ""
@@ -807,11 +968,18 @@ class TextBox():
 				self.active = True
 			else:
 				self.active = False
-		
+
+		if self.timeout > 0:
+			self.timeout -= 1
 		if event.type == pygame.KEYDOWN:
 			if self.active:
-				if event.key == pygame.K_RETURN:
-					print(self.text)	# TODO: REQUEST A LOG IN
+				if event.key == pygame.K_TAB:
+					if self.timeout <= 0:
+						self.active = False
+						next_textbox_list = [textbox for textbox in TextBox.instances if textbox.index == self.index + 1]
+						next_textbox = next_textbox_list[0] if len(next_textbox_list) > 0 else TextBox.instances[0]	# This part could be improved, since this rotates through ALL of the textboxes, not just through the ones that are shown on the screen.
+						next_textbox.active = True
+						next_textbox.timeout = 2
 				elif event.key == pygame.K_BACKSPACE:
 					self.text = self.text[:-1]
 				else:
@@ -825,12 +993,12 @@ class TextBox():
 
 		# Draw the text
 		colour = self.placeholder_colour if self.text == "" else self.text_colour
-		# if self.type == "password" and self.text != "":
-		# 	final_text = ""
-		# 	for i in range(len(self.render_text)):
-		# 		final_text += "•"
-		# else:
-		final_text = self.render_text
+		if self.type == "password" and self.text != "":
+			final_text = ""
+			for i in range(len(self.render_text)):
+				final_text += "•"
+		else:
+			final_text = self.render_text
 		text_surface = self.font.render(final_text, True, colour)
 		surface.blit(text_surface, (self.rect.x + 5, self.rect.y + 5))
 

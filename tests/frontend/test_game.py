@@ -328,7 +328,7 @@ def game_start(game: Game, test = True):
 # 				pygame.draw.rect(expected_transparent_screen, bar.stat_background_rgba, bar.border_rect, 0, bar.border_radius)
 # 		else:
 # 			pygame.draw.rect(expected_transparent_screen, bar.stat_background_rgba, bar.border_rect, 0, bar.border_radius)
-# 		expected_screen.blit(expected_transparent_screen, (0,0))
+# 	expected_screen.blit(expected_transparent_screen, (0,0))
 	
 # 	for bar in game.statbarlist:
 # 		if bar.stat_type == 'healthbar':
