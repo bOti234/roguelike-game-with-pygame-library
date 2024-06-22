@@ -409,10 +409,6 @@ class Game():
 					pygame.mixer.Channel(i).set_volume(self.settings.mastervolume * self.settings.gamesoundvolume)
 
 			self.openInGameMenu('options')
-
-
-	def openInventoryMenu(self):
-		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
 	
 	def openItemListMenu(self):
 		self.playSound(self.sounds['popupwindow_sound'], self.settings.mastervolume * self.settings.gamesoundvolume, 5)
@@ -663,7 +659,7 @@ class Game():
 
 		# Draw Boss alert:
 		if self.current_boss is not None:
-			font_border = font = pygame.font.Font(None, 35)
+			font_border = pygame.font.Font(None, 35)
 			self.writeOnScreen('Boss appeared', self.settings.screen_width/2 - font_border.size('Boss appeared')[0]/3 - 2, 98, 'black')
 			self.writeOnScreen('Boss appeared', self.settings.screen_width/2 - font.size('Boss appeared')[0]/3, 100, 'red')
 
@@ -792,10 +788,6 @@ class Game():
 		if keys[pygame.K_ESCAPE]:
 			if self.running:
 				self.openInGameMenu()
-
-		# if keys[pygame.K_i]:
-		# 	if self.running:
-		# 		self.openInventoryMenu()
 
 		if keys[pygame.K_e]:
 			if self.running:
@@ -991,9 +983,10 @@ class Game():
 	
 	def spawnEnemies(self):
 		if self.EnemyCooldown <= 0:
+			curr_enemylist_len = len(self.EnemyGroup)
 			for i in range(10 + random.randint(0, int(self.time//20))):
 				chance = random.random()
-				if chance > 0.3 - (self.time // 60) * 0.02:
+				if chance > 0.3 - (self.time // 60) * 0.02 or len(self.EnemyGroup) == curr_enemylist_len:
 					enemytype = 'brute' if chance > 0.95 else 'normal'
 					enemylevel = (self.time // 60) + 6 if chance > 0.95 else (self.time // 60) + 1
 					enemycolour = 'crimson'if chance > 0.95 else 'red'
@@ -1002,12 +995,12 @@ class Game():
 					randpos = pygame.Vector2(self.player.position.x + 1350 * math.sin(randangle * math.pi / 180) + radius_diff, self.player.position.y + 1100 * math.cos(randangle * math.pi / 180) + radius_diff)
 					enemy = Enemy(self.weaponlist, randpos, enemylevel, colour = enemycolour, type = enemytype)
 					self.EnemyGroup.add(enemy)
-					self.EnemyCooldown = 12 - (self.time // 120)
-					if self.EnemyCooldown < 7:
-						self.EnemyCooldown = 7
+			self.EnemyCooldown = 12 - (self.time // 120)
+			if self.EnemyCooldown < 7:
+				self.EnemyCooldown = 7
 
-					if self.current_boss:
-						self.EnemyCooldown = 5
+			if self.current_boss:
+				self.EnemyCooldown = 5
 		else:
 			self.EnemyCooldown -= self.dt
 
@@ -1024,7 +1017,7 @@ class Game():
 	def spawnEnemyDrops(self, enemy: Enemy):
 		chance = random.random()
 
-		if chance < 0.04:
+		if chance < 0.04 or self.test['mode']:
 			position = pygame.Vector2(enemy.position.x - enemy.width/2, enemy.position.y - enemy.height/2)
 			kit = HealthKit(position)
 			self.ItemGroup.add(kit)

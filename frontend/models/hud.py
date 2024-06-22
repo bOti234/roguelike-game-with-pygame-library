@@ -131,12 +131,20 @@ class Menu(HUD):
 			run = True
 			logchange = False
 			button_timeout = 100
+			error_message_timer = 0
+			error_message = ''
 			while run:
-				if button_timeout > 0:
-					button_timeout -= 1
 				self.screen.fill("black")
 				window = pygame.Rect(menuX, menuY, self.screen_width - 2*menuX, self.screen_height - 2*menuY)
 				pygame.draw.rect(self.screen, (52, 78, 91), window)
+
+				if error_message_timer > 0:
+					error_message_timer -= 1
+					text = font.render(error_message, True, 'red')
+					self.screen.blit(text, (self.screen_width/2 - text.get_width()/2, 100))
+
+				if button_timeout > 0:
+					button_timeout -= 1
 
 				#check menu state
 				if self.state == "inMainMenu":
@@ -235,6 +243,8 @@ class Menu(HUD):
 					if log_button.draw(self.screen):
 						response = fetch_user(username_textbox.text, password_textbox.text, csrf_token)
 						if response["status"] == "error":
+							error_message = response["message"]
+							error_message_timer = 1000
 							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
 							self.state == "logInMenu"
 							button_timeout = 100
@@ -259,7 +269,8 @@ class Menu(HUD):
 						email = email_textbox.text if email_textbox.text != "" else userdata['email']
 						response = submit_update_user(userdata['player_name'], username, password, email, csrf_token)
 						if response["status"] == "error":
-							print(response['message'])
+							error_message = response["message"]
+							error_message_timer = 1000
 							username_textbox.reset(), password_textbox.reset(), email_textbox.reset()
 							self.state == "updateMenu"
 							button_timeout = 100
@@ -280,6 +291,8 @@ class Menu(HUD):
 					if user_button.draw(self.screen):
 						response = submit_new_user(username_textbox.text, password_textbox.text, password2_textbox.text, email_textbox.text, 0, csrf_token)
 						if response["status"] == "error":
+							error_message = response["message"]
+							error_message_timer = 1000
 							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
 							self.state == "createMenu"
 							button_timeout = 100
@@ -663,12 +676,20 @@ class Menu(HUD):
 			run = True
 			logchange = False
 			button_timeout = 100
+			error_message_timer = 0
+			error_message = ''
 			while run:
-				if button_timeout > 0:
-					button_timeout -= 1
 				self.screen.fill("black")
 				window = pygame.Rect(menuX, menuY, self.screen_width - 2*menuX, self.screen_height - 2*menuY)
 				pygame.draw.rect(self.screen, (52, 78, 91), window)
+
+				if button_timeout > 0:
+					button_timeout -= 1
+
+				if error_message_timer > 0:
+					error_message_timer -= 1
+					text = font.render(error_message, True, 'red')
+					self.screen.blit(text, (self.screen_width/2 - text.get_width()/2, 100))
 
 				#check menu state
 				if self.state == "playerdead":
@@ -698,6 +719,8 @@ class Menu(HUD):
 					if login_button.draw(self.screen):
 						response = fetch_user(username_textbox.text, password_textbox.text, csrf_token)
 						if response["status"] == "error":
+							error_message = response["message"]
+							error_message_timer = 1000
 							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
 							self.state == "logInMenu"
 							button_timeout = 100
@@ -718,6 +741,8 @@ class Menu(HUD):
 					if create_button.draw(self.screen):
 						response = submit_new_user(username_textbox.text, password_textbox.text, password2_textbox.text, email_textbox.text, 0, csrf_token)
 						if response["status"] == "error":
+							error_message = response["message"]
+							error_message_timer = 1000
 							username_textbox.reset(), password_textbox.reset(), password2_textbox.reset(), email_textbox.reset()
 							self.state == "createMenu"
 							button_timeout = 100

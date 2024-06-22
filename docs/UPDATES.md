@@ -378,3 +378,9 @@ Github repository for the second assignment of Programming II.
 -With increased reach you can collect experience orbs from far away. On the final level, your bullets gain additional pierce and lifetime.
 
 -With second chance you won't die the first time you health drops below zero. When this would happen you regain a percentage of your max health, then kill all nerby enemies. After this effect, you lose this passive, but you can choose a different one in place of this after you level up.
+
+### Update v1.4.5
+
+-Finished test_game.py (not for all functions, only the most frequently used ones and most important ones).
+
+-Added error messages to screen, when creating/updating a user, logging in fails.
