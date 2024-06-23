@@ -384,3 +384,9 @@ Github repository for the second assignment of Programming II.
 -Finished test_game.py (not for all functions, only the most frequently used ones and most important ones).
 
 -Added error messages to screen, when creating/updating a user, logging in fails.
+
+### Update v2.0.0
+
+-Fixing last bugs.
+
+-Commenting on most functions.

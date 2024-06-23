@@ -1,5 +1,6 @@
 from .network import get_scoreboard, post_score, register_user, login_user, logout_user, update_user, get_csrf_token
 
+# These are really simple, I just construct a dictionary with the given data (if there is given data), and call network.pys respective function
 def fetch_scoreboard():
     return get_scoreboard("scoreboard/")
 

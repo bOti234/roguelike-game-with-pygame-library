@@ -4,7 +4,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-%he4j2wf5felvn&^q=qg5ub@qmbd)$wiij9)j=hckm7i!o4vh-'
+SECRET_KEY = 'django-insecure-%he4j2wf5felvn&^q=qg5ub@qmbd)$wiij9)j=hckm7i!o4vh-'   # This is a secret key here Professor Klikovits, please don't copy it 😎👍
 
 ALLOWED_HOSTS = []
 
@@ -20,10 +20,10 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
-    'backend.game',
+    'backend.game', # Including my app here
 ]
 
-AUTH_USER_MODEL = 'game.Users'
+AUTH_USER_MODEL = 'game.Users'  # I'm using a custom user model, so I need to set it here.
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 
@@ -35,15 +35,15 @@ SESSION_COOKIE_AGE = 3600
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    #'game.forms.UsersBackend'
+    'django.contrib.auth.backends.ModelBackend'
 ]
 
+# These might not be necessary, but I had so many problems with this csrf-token, so I need(?) to include these.
 CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
-CSRF_COOKIE_HTTPONLY = False  # Allow JavaScript access to the CSRF cookie (set to True if not using JavaScript to read the cookie)
+CSRF_COOKIE_HTTPONLY = True  # I'm not using js, so I'm setting this to True to read the cookie
 CSRF_COOKIE_NAME = 'csrftoken'
 
-# Include the CSRF token in the cookie and make sure it's available to JavaScript
+# Including the CSRF token in the cookie and making sure it's available to JavaScript (not that I use js here)
 CSRF_USE_SESSIONS = False
 
 CORS_ALLOW_CREDENTIALS = True
@@ -58,6 +58,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# The base urls.py. This has the other file's urls as well
 ROOT_URLCONF = 'backend.roguelikegame.urls'
 
 TEMPLATES = [

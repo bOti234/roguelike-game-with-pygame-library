@@ -10,7 +10,7 @@ import pandas
 from typing import List, Dict, Union
 from .gamesettings import GameSettings
 from .gameobject import GameObject, PlayerCharacter, Passive, Weapon, Bullet, Enemy, Experience, WeaponKit, HealthKit, Magnet
-from .hud import HUD, StatBar, Inventory, Menu, Button
+from .hud import HUD, StatBar, Menu, Button
 from .event import Event
 from .requesthandler import Requesthandler
 from ..utils.database import get_csrf
@@ -94,9 +94,9 @@ class Game():
 		if (not self.test['mode']) or self.test['data'] == 'need_weapon_passive_event_test':
 			self.passivelist = self.getPassives()
 			self.player_passives: Dict[str, Passive] = {}
-			passive = [passive for passive in self.passivelist if passive.name == 'Increased Reach'][0]		# This is just for testing / later with game modificators
-			self.player_passives.update({passive.name: passive})
-			self.player_passives[passive.name].upgradeItem(self.player, 5)
+			# passive = [passive for passive in self.passivelist if passive.name == 'Increased Reach'][0]		# This is just for testing / later with game modificators
+			# self.player_passives.update({passive.name: passive})
+			# self.player_passives[passive.name].upgradeItem(self.player, 5)
 
 			self.weaponlist = self.getWeapons()
 			self.player_weapons: Dict[str, Weapon] = {}
@@ -334,6 +334,7 @@ class Game():
 		menu = Menu(self.screen, self.settings.screen_width, self.settings.screen_height, self.test)
 		menu.state = state
 		response, userdata = menu.openMainMenu(self.csrf_token, self.sizeratio_x, self.sizeratio_y, self.settings.mastervolume, self.settings.musicvolume, self.settings.gamesoundvolume, self.userdata)
+		self.userdata = userdata
 		if self.test['mode']:
 			return response
 		elif response[0] == 'video setting' or response[0] == 'video setting final':
@@ -362,13 +363,11 @@ class Game():
 			self.openMainMenu('options')
 
 		if response == "start game":
-			self.userdata = userdata
 			self.stopSound(1)
 			self.gameRun()
 
 		elif response == "exit":
-			self.running = False
-			pygame.quit()
+			pygame.event.post(pygame.event.Event(pygame.QUIT))
 
 	def openInGameMenu(self, state = 'ingame'):
 		if state == 'ingame':
@@ -431,8 +430,7 @@ class Game():
 		if self.test['mode']:
 			return response
 		if response == "exit":
-			self.running = False
-			pygame.quit()
+			pygame.event.post(pygame.event.Event(pygame.QUIT))
 		elif response == "return to main menu":
 			self.gameStart(
 				self.settings.difficulty,
@@ -538,10 +536,11 @@ class Game():
 
 		while self.running:
 			# poll for events
-			# pygame.QUIT event means the user clicked X to close your window
+			# pygame.QUIT event means the user clicked X to close your window (or a QUIT event was sent by one of the functions)
 			for event in pygame.event.get():
 				if event.type == pygame.QUIT:
 					self.running = False
+					break
 
 			mouse_pos = pygame.Vector2(pygame.mouse.get_pos()) # Get mouse pos
 
@@ -571,7 +570,6 @@ class Game():
 			self.updateEnemyPosition()
 			self.updateEventTimer()
 
-			#self.writeOnScreen(str(mouse_pos.x)+" "+str(mouse_pos.y), mouse_pos.x, mouse_pos.y)  # Write some stuff on the self.screen
 			self.drawHUDElements()
 			self.calculateDPS()
 			
@@ -621,10 +619,9 @@ class Game():
 			if self.test['mode']:
 				break
 		
-		#pygame.quit()
+		pygame.quit()
 
 	def drawPlayer(self):
-		#pygame.draw.rect(self.screen, "blue", self.player.rect)
 		if self.player.hitCooldown > 0:     # Draw player with diff colour based on if they were hit recently or not
 			self.player.hitCooldown -= self.dt
 			pygame.draw.circle(self.screen, "darkmagenta", (self.player.position.x, self.player.position.y), self.player.radius) 
@@ -682,7 +679,7 @@ class Game():
 		# Draw Stat boxes like exp bar, health bar, barrier bar:
 		self.drawStatBoxes()
 
-		# Draw the first five users in the scoreboard:
+		# Draw the first ten users in the scoreboard:
 		if self.scoreboard:
 			scoreboard = self.scoreboard[:10] if len(self.scoreboard) > 10 else self.scoreboard
 			
@@ -709,6 +706,7 @@ class Game():
 				self.writeOnScreen(str(i+1)+'. '+str(user['player_name'])+': '+str(user['score'])+' points.', pos_x + 5, 400 + 25 * i, colour)
 	
 	def drawStatBoxes(self):
+		# Drawing the bar background
 		for bar in self.statbarlist:
 			if bar.stat_type == "barrierbar":
 				if "Protective Barrier" in self.player_passives.keys():
@@ -717,11 +715,12 @@ class Game():
 				bar.drawTransparent()
 		self.screen.blit(self.traspscreen_hud, (0,0))
 
+		# Drawing the bar border and the bar
 		for bar in self.statbarlist:
 			if bar.stat_type == "healthbar":
 				bar.draw((self.player.width - 4) * self.player.health_current / self.player.health_max)
 			elif bar.stat_type == "barrierbar":
-				if "Protective Barrier" in self.player_passives.keys(): # NOOO THIS IS AN ITERATION AS WELLLL
+				if "Protective Barrier" in self.player_passives.keys(): # NOOO THIS IS AN ITERATION AS WELLLL (to understand my problem, go to line 103)
 					barrier = self.player_passives["Protective Barrier"]
 					bar.draw((self.player.width - 4) * self.player.status_effects["barrier"] / barrier.value)
 			elif bar.stat_type == "experiencebar":
@@ -730,14 +729,14 @@ class Game():
 				font = pygame.font.Font(None, 30)
 				self.writeOnScreen(exp_progress_txt, self.settings.screen_width/2 - font.size(exp_progress_txt)[0]//2, self.settings.screen_height - 20, reactive = True)  # Write some stuff on the self.screen
 	
-	def getBackgroundImage(self):
+	def getBackgroundImage(self):	# Loads in the background image
 		dirname = os.path.dirname(__file__)
 		filename_background = os.path.join(dirname, '../../assets/images/background/')
 		image = pygame.image.load(filename_background + "/background_image.png").convert_alpha()
 		self.backgroundimage = pygame.transform.scale(image, (int(image.get_rect().width * 3), int(image.get_rect().height * 3)))
 
 	def drawBackground(self):
-		# fill the self.screen with a colour to wipe away anything from last frame
+		# Filling the self.screen with a colour to wipe away anything from last frame
 		self.screen.fill("#124a21")
 		self.traspscreen.fill((18, 74, 33, 0))
 		image_rect = self.backgroundimage.get_rect()
@@ -785,13 +784,13 @@ class Game():
 					self.background.y -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 					self.background.x -= self.player.speed * rate * ( self.dt / 2**(1/2) -  self.dt)
 
-		if keys[pygame.K_ESCAPE]:
-			if self.running:
-				self.openInGameMenu()
-
 		if keys[pygame.K_e]:
 			if self.running:
 				self.openItemListMenu()
+		
+		if keys[pygame.K_ESCAPE]:
+			if self.running:
+				self.openInGameMenu()
 
 	def updateGameScore(self, event: str, obj: Union[Enemy, Experience, None] = None):
 		if event == 'enemy killed':

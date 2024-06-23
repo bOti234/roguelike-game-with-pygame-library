@@ -7,13 +7,13 @@ from frontend.models.game import Game
 game = Game()
 
 def createServer():
-    # Start Django server
+    # Starting the Django server
     server_process = subprocess.Popen(['python', 'run_server.py'])
 
-    # Wait for the server to start up
-    time.sleep(2)  # Adjust the sleep time as necessary
+    # Waiting for the server to start up
+    time.sleep(2)
 
-    # Check if the server is up by sending a request
+    # Checking if the server is up by sending a request
     try:
         response = requests.get('http://localhost:8000/pygame/gettoken/')
         response.raise_for_status()
@@ -30,8 +30,8 @@ if __name__ == "__main__":
         difficulty = "normal",
         speed = "normal", 
         fps = 60, 
-        screen_width = screeninfo.get_monitors()[0].width,
-        screen_height = screeninfo.get_monitors()[0].height
+        screen_width = screeninfo.get_monitors()[0].width,  # ⬅️Setting the screen width to fullscreen
+        screen_height = screeninfo.get_monitors()[0].height # ⬅️Setting the screen height to fullscreen
     )
 
     # At the end of your script, we terminate the server process

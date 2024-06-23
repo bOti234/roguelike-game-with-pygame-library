@@ -7,8 +7,8 @@ if __name__ == "__main__":
         difficulty = "normal",
         speed = "normal", 
         fps = 60, 
-        screen_width = screeninfo.get_monitors()[0].width,
-        screen_height = screeninfo.get_monitors()[0].height
+        screen_width = screeninfo.get_monitors()[0].width,  # ⬅️Setting the screen width to fullscreen
+        screen_height = screeninfo.get_monitors()[0].height # ⬅️Setting the screen height to fullscreen
     )
 
 	# At the end of your script, we terminate the server process

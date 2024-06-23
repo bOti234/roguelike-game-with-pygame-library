@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.db import models
 from django.utils import timezone
 
+# User and user manager models. It has an id, player_name, password, email, score, last_login, is_active, is_admin
+# Since I have scores in my user table, I couldn't use django's default user table
 class UsersManager(BaseUserManager):
     def create_user(self, email, player_name, password=None, highscore = 0):
         if not email:
@@ -48,6 +50,7 @@ class Users(AbstractBaseUser):
     class Meta:
         db_table = 'Users'
 
+# The scoreboards table. It has an id, player_name, score and date_achieved
 class Scoreboard(models.Model):
     player_name = models.CharField(max_length=100)
     score = models.IntegerField()

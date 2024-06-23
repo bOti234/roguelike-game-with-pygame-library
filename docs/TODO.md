@@ -10,7 +10,5 @@
 
 -Adding in background elements (e.g. stones, trees, a pond where the player can't go, etc.)
 
--Cleaning up the code by removing any unnececary lines and making it more efficient.
-
 
 There are other problems that need to be fixed, but those didn't really come to my mind. There are also biger parts of the project that are not yet implemented, those come later (e.g., main menu, settings menu, map selector, starter weapon selector, log in/sign up. user profile editing, scoreboard, etc.)
