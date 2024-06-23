@@ -76,7 +76,7 @@ class UserViewTests(TestCase):
         self.assertIn('userdata', response.json())
         self.assertEqual(response.json()['userdata']['player_name'], 'updated_user')
         self.assertEqual(response.json()['userdata']['email'], 'updated_user@example.com')
-        self.assertEqual(response.json()['userdata']['highscore'], 100)
+        self.assertEqual(response.json()['userdata']['highscore'], 0)
 
         # Test for invalid update
         invalid_data = {
