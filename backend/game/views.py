@@ -90,7 +90,14 @@ class UserView(View):
         
         # Creating a user form with the original users instance, but with the new data. 
         # It overwrites the previous one, so it won't create a new line in the table
-        form = UserCreateForm(data, instance = user)
+        update_data = {
+            'player_name': data['player_name'],
+            'password1': data['password1'],
+            'password2': data['password2'],
+            'email': data['email'],
+            'highscore': user.highscore
+        }
+        form = UserCreateForm(update_data, instance = user)
         if not form.is_valid():
             return JsonResponse({'status': 'error', 'message': 'Update failed', 'errors': form.errors}, status=400)
         
